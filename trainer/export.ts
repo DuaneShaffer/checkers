@@ -24,6 +24,7 @@ export interface ExportOptions {
   out?: string;
   budgetBytes?: number;
   now?: Date;
+  champion?: number;
 }
 
 export interface ExportSummary {
@@ -231,7 +232,8 @@ export function exportRun(dir: string, options: ExportOptions = {}): ExportSumma
   const gens = stats.map((s) => s.gen);
   const latest = gens.length ? gens[gens.length - 1] : null;
   const latestGames = latest === null ? 0 : (ratings.get(playerKey(latest))?.games ?? 0);
-  const champion = latest === null ? null : pickChampion(latest, ratings, Math.min(config.minRatedGames, latestGames));
+  if (options.champion !== undefined && !gens.includes(options.champion)) throw new Error(`Generation ${options.champion} is not in this run`);
+  const champion = options.champion ?? (latest === null ? null : pickChampion(latest, ratings, Math.min(config.minRatedGames, latestGames)));
   const required = [...new Set([0, champion ?? 0, latest ?? 0])];
 
   const netGens = logSpacedSelection(gens.filter((g) => files.hasNet(g)), required, MAX_SHIPPED_NETS);
@@ -277,16 +279,18 @@ export function exportRun(dir: string, options: ExportOptions = {}): ExportSumma
 
 function main(): void {
   const { values } = parseArgs({
-    options: { run: { type: 'string' }, out: { type: 'string' }, help: { type: 'boolean' } },
+    options: { run: { type: 'string' }, out: { type: 'string' }, champion: { type: 'string' }, help: { type: 'boolean' } },
     strict: true,
   });
   if (values.help) {
-    console.log('node trainer/export.ts [--run main] [--out public/training]');
+    console.log('node trainer/export.ts [--run main] [--out public/training] [--champion GEN]');
     return;
   }
   const dir = runDir(values.run ?? 'main');
   if (values.out && !existsSync(values.out)) mkdirSync(values.out, { recursive: true });
-  const summary = exportRun(dir, { out: values.out });
+  const champion = values.champion === undefined ? undefined : Number(values.champion);
+  if (champion !== undefined && !Number.isInteger(champion)) throw new Error(`--champion expects a generation number, got "${values.champion}"`);
+  const summary = exportRun(dir, { out: values.out, champion });
   console.log(
     `exported ${summary.gens} replay files and ${summary.nets} nets (${(summary.bytes / 1024).toFixed(1)} KB, champion ${summary.champion}) to ${summary.out}`,
   );

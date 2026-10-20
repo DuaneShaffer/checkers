@@ -78,6 +78,16 @@ function readManifest(out: string): TrainingManifest {
 }
 
 describe('exportRun', () => {
+  it('lets the caller pick the champion and ships its net', () => {
+    const out = join(root, 'out-champion');
+    exportRun(runPath, { out, champion: 12 });
+    const manifest = readManifest(out);
+    expect(manifest.champion).toBe(12);
+    expect(manifest.generations.find((g) => g.gen === 12)?.net).not.toBeNull();
+    expect(checkTrainingAssets(out).problems).toEqual([]);
+    expect(() => exportRun(runPath, { out, champion: GENS + 5 })).toThrow(/not in this run/);
+  });
+
   it('writes a manifest, replays and at most 28 log-spaced nets that pass validation', () => {
     const out = join(root, 'out-full');
     const summary = exportRun(runPath, { out, now: new Date('2026-10-20T07:00:00Z') });

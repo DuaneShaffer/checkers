@@ -26,7 +26,7 @@ The dev server serves `public/training/**` straight from disk on every request (
 npm run bench                       # measure throughput on this machine
 npm run train -- --run main         # writes to ~/checkers-runs/main (CHECKERS_RUNS overrides)
 npm run train:resume -- --run main  # resume after a stop; Ctrl+C finishes the current generation
-npm run export -- --run main        # curate replays and nets into public/training (≤ 5 MB)
+npm run export -- --run main        # curate replays and nets into public/training (≤ 5 MB); --champion N overrides the shipped net
 ```
 
 Commit `public/training/` and push to publish a new training history to the site.
