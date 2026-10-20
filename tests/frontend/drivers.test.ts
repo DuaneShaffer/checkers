@@ -9,7 +9,7 @@ import { AiDriver } from '../../src/game/aiDriver.ts';
 import { GameController } from '../../src/game/controller.ts';
 import type { DriverSnapshot } from '../../src/game/driver.ts';
 import { LocalDriver } from '../../src/game/localDriver.ts';
-import { hasMoveBy, moverOfPly } from '../../src/game/plies.ts';
+import { fullMoveLabel, hasMoveBy, moverOfPly } from '../../src/game/plies.ts';
 import { ReviewDriver } from '../../src/game/reviewDriver.ts';
 import type { BoardView, Highlights, PieceIds } from '../../src/scene/types.ts';
 
@@ -359,6 +359,17 @@ describe('hasMoveBy', () => {
     expect(hasMoveBy({ startFen: 'W:W14:B10', moves: ['14-17'] }, [1])).toBe(true);
     expect(hasMoveBy({ startFen: INITIAL_FEN, moves: ['11-15', '23-19'] }, [])).toBe(false);
     expect(moverOfPly(1, 3)).toBe(0);
+  });
+});
+
+describe('fullMoveLabel', () => {
+  it('numbers full moves from whichever side starts', () => {
+    expect([0, 1, 2, 3].map((p) => fullMoveLabel(0, p))).toEqual([
+      { number: 1, side: 0 }, { number: 1, side: 1 }, { number: 2, side: 0 }, { number: 2, side: 1 },
+    ]);
+    expect([0, 1, 2].map((p) => fullMoveLabel(1, p))).toEqual([
+      { number: 1, side: 1 }, { number: 2, side: 0 }, { number: 2, side: 1 },
+    ]);
   });
 });
 

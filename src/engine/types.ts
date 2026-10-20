@@ -17,6 +17,7 @@ export interface Move {
 }
 
 export type EndReason = 'no-moves' | 'repetition' | 'no-progress' | 'max-plies' | 'resign' | 'agreement';
+export interface GameResult { winner: Side | null; reason: EndReason }
 export type GameStatus = { over: false } | { over: true; winner: Side | null; reason: EndReason };
 export type ResultStr = '1-0' | '0-1' | '1/2-1/2';
 

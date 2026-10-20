@@ -1,7 +1,6 @@
 import type { LevelId } from '../ai/levels.ts';
-import { fromFen } from '../engine/position.ts';
-import type { Side } from '../engine/types.ts';
-import type { GameResult } from '../net/protocol.ts';
+import { isValidFen } from '../engine/position.ts';
+import type { GameResult, Side } from '../engine/types.ts';
 
 const PREFIX = 'checkers:';
 
@@ -52,7 +51,7 @@ export interface ResumeRecord {
 
 export interface FinishedGame {
   v: 1;
-  mode: 'ai' | 'local' | 'online' | 'live-match';
+  mode: 'ai' | 'local' | 'online';
   startFen: string;
   moves: string[];
   result: GameResult;
@@ -64,19 +63,9 @@ export interface FinishedGame {
 const isStringArray = (x: unknown): x is string[] => Array.isArray(x) && x.every((s) => typeof s === 'string');
 const isSideArray = (x: unknown): x is Side[] => Array.isArray(x) && x.every((s) => s === 0 || s === 1);
 
-function isFen(x: unknown): x is string {
-  if (typeof x !== 'string') return false;
-  try {
-    fromFen(x);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function loadResume(): ResumeRecord | null {
   const r = readJson<ResumeRecord>('resume');
-  if (!r || r.v !== 1 || (r.mode !== 'ai' && r.mode !== 'local') || !isFen(r.startFen) || !isStringArray(r.moves)) return null;
+  if (!r || r.v !== 1 || (r.mode !== 'ai' && r.mode !== 'local') || !isValidFen(r.startFen) || !isStringArray(r.moves)) return null;
   if (r.mode === 'ai' && (r.humanSide !== 0 && r.humanSide !== 1)) return null;
   if (r.id !== undefined && typeof r.id !== 'string') return null;
   return r;
@@ -105,7 +94,7 @@ export function findResume(token: string | null, mode: ResumeRecord['mode']): Re
 
 export function loadFinished(): FinishedGame | null {
   const g = readJson<FinishedGame>('last');
-  if (!g || g.v !== 1 || !isFen(g.startFen) || !isStringArray(g.moves) || !g.result) return null;
+  if (!g || g.v !== 1 || !isValidFen(g.startFen) || !isStringArray(g.moves) || !g.result) return null;
   if (g.mySides !== undefined && !isSideArray(g.mySides)) return null;
   return g;
 }

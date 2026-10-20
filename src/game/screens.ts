@@ -3,9 +3,11 @@ import type { AiClientApi } from '../ai/protocol.ts';
 import type { AppContext, GameScreenHandle, Screen, ScreenFactory } from '../app/contracts.ts';
 import { type ResumeRecord, clearResume, findResume, loadFinished, newResumeId, saveResume } from '../app/persist.ts';
 import { aiHash, formatHash, parseAiParams } from '../app/router.ts';
-import { INITIAL_FEN, fromFen } from '../engine/position.ts';
+import { Game } from '../engine/game.ts';
+import { INITIAL_FEN, isValidFen } from '../engine/position.ts';
 import type { Side } from '../engine/types.ts';
 import { isTrainingManifest } from '../shared/formats.ts';
+import { patientTimeout } from '../shared/patientTimeout.ts';
 import { h } from '../ui/dom.ts';
 import { type DialogHandle, openDialog } from '../ui/modal.ts';
 import { resultHeadline } from './announcer.ts';
@@ -23,11 +25,23 @@ export interface ResolvedEngine {
   label: string;
 }
 
+export const MANIFEST_TIMEOUT_MS = 8000;
+
+async function fetchManifest(): Promise<unknown> {
+  const abort = new AbortController();
+  const cancelTimer = patientTimeout(MANIFEST_TIMEOUT_MS, () => abort.abort());
+  try {
+    const res = await fetch(trainingUrl('manifest.json'), { cache: 'no-cache', signal: abort.signal });
+    return res.ok ? await res.json() : null;
+  } finally {
+    cancelTimer();
+  }
+}
+
 export async function resolveEngine(client: AiClientApi, gen: number | null, notify: (msg: string) => void): Promise<ResolvedEngine> {
   const heuristic: ResolvedEngine = { engine: { client, netId: 'heuristic' }, label: 'Heuristic engine' };
   try {
-    const res = await fetch(trainingUrl('manifest.json'), { cache: 'no-cache' });
-    const manifest: unknown = res.ok ? await res.json() : null;
+    const manifest = await fetchManifest();
     if (!isTrainingManifest(manifest)) return heuristic;
     const target = gen ?? manifest.champion;
     const entry = target === null ? undefined : manifest.generations.find((g) => g.gen === target && g.net);
@@ -46,13 +60,9 @@ export async function resolveEngine(client: AiClientApi, gen: number | null, not
 
 function validFenParam(fen: string | null, ctx: AppContext): string | null {
   if (!fen) return null;
-  try {
-    fromFen(fen);
-    return fen;
-  } catch {
-    ctx.toast(INVALID_FEN_MESSAGE, 'error');
-    return null;
-  }
+  if (isValidFen(fen)) return fen;
+  ctx.toast(INVALID_FEN_MESSAGE, 'error');
+  return null;
 }
 
 function brokenSave(ctx: AppContext): Screen {
@@ -196,16 +206,15 @@ export const localScreen: ScreenFactory = (ctx, params) => {
 export const reviewScreen: ScreenFactory = (ctx) => {
   const last = loadFinished();
   if (!last) return emptyReview(ctx);
-  let driver: ReviewDriver;
   try {
-    new LocalDriver({ startFen: last.startFen, moves: last.moves }).dispose();
-    driver = new ReviewDriver(last.startFen, last.moves);
+    Game.fromMoves(last.moves, { startFen: last.startFen });
   } catch {
     return emptyReview(ctx);
   }
+  const driver = new ReviewDriver(last.startFen, last.moves);
   const mine: Side[] = last.mySides ?? (last.mode === 'ai' || last.mode === 'online' ? [last.orientation] : [0, 1]);
   const subtitle = `${last.title} · ${resultHeadline(last.result, mine)}`;
-  const handle = mountGameScreen(ctx, driver, { mode: 'live-match', orientation: last.orientation, title: 'Review', subtitle });
+  const handle = mountGameScreen(ctx, driver, { mode: 'review', orientation: last.orientation, title: 'Review', subtitle });
   handle.setExtraActions([
     { label: 'Start', onClick: () => driver.seek(0) },
     { label: 'Back', onClick: () => driver.step(-1) },

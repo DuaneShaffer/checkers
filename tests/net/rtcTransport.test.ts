@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WireMsg } from '../../src/net/protocol.ts';
-import { RtcLink } from '../../src/net/rtcTransport.ts';
+import { HANDSHAKE_DEADLINE_MS, RtcLink } from '../../src/net/rtcTransport.ts';
 
 class FakeChannel {
   readyState: RTCDataChannelState = 'connecting';
@@ -78,6 +78,11 @@ class FakePC extends EventTarget {
   setIce(state: RTCIceConnectionState): void {
     this.iceConnectionState = state;
     this.oniceconnectionstatechange?.();
+  }
+
+  setConn(state: RTCPeerConnectionState): void {
+    this.connectionState = state;
+    this.onconnectionstatechange?.();
   }
 
   close(): void {
@@ -180,6 +185,51 @@ describe('RtcLink', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(guest.state).toBe('reconnecting');
     expect(gpc.log).toEqual(['remote:offer:offer-1', 'createAnswer', 'local:answer']);
+  });
+
+  it('fails a link that cannot reach its peer before opening', async () => {
+    const { guest, gpc } = await pair();
+    const states: string[] = [];
+    guest.onState((s) => states.push(s));
+    gpc.setIce('disconnected');
+    expect(guest.state).toBe('connecting');
+    gpc.setConn('failed');
+    expect(guest.state).toBe('closed');
+    expect(guest.closeReason).toBe('failed');
+    expect(guest.reachedPeer).toBe(false);
+    expect(states).toEqual(['closed']);
+    const { host, hpc } = await pair();
+    hpc.setIce('failed');
+    expect(host.state).toBe('closed');
+    expect(host.closeReason).toBe('failed');
+  });
+
+  it('gives up when ICE connects but the channel never opens', async () => {
+    const { guest, gpc } = await pair();
+    vi.useFakeTimers();
+    gpc.setIce('connected');
+    gpc.setConn('connecting');
+    expect(guest.reachedPeer).toBe(true);
+    await vi.advanceTimersByTimeAsync(HANDSHAKE_DEADLINE_MS - 100);
+    expect(guest.state).toBe('connecting');
+    await vi.advanceTimersByTimeAsync(200);
+    expect(guest.state).toBe('closed');
+    expect(guest.closeReason).toBe('failed');
+  });
+
+  it('keeps a link whose handshake finishes after ICE connects', async () => {
+    const { host, guest, hpc, gpc } = await pair();
+    vi.useFakeTimers();
+    hpc.setIce('connected');
+    gpc.setIce('connected');
+    await vi.advanceTimersByTimeAsync(1000);
+    hpc.channel.open();
+    gpc.channel.open();
+    await vi.advanceTimersByTimeAsync(HANDSHAKE_DEADLINE_MS * 2);
+    expect(host.state).toBe('open');
+    expect(guest.state).toBe('open');
+    gpc.setConn('failed');
+    expect(guest.state).toBe('open');
   });
 
   it('closes when the channel closes and stops delivering', async () => {

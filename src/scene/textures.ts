@@ -58,7 +58,6 @@ function smooth(a: number, b: number, x: number): number {
 export interface WoodSpecies {
   light: RGB;
   dark: RGB;
-  /** growth rings per world unit across the grain */
   rings: number;
   warp: number;
   figure: number;
@@ -86,16 +85,10 @@ interface WoodBlock {
 }
 
 interface WoodPixels {
-  /** 0 = light wood, 1 = dark */
   tone: Float32Array;
-  /** latewood band strength, used for roughness */
   late: Float32Array;
 }
 
-/**
- * Procedural plain-sawn grain. Low-frequency warp and figure are sampled on a coarse grid and
- * interpolated, so the per-pixel cost is a few multiplies plus a 1D pore noise.
- */
 function renderWood(block: WoodBlock, species: WoodSpecies, seed: number): WoodPixels {
   const { width: w, height: h } = block;
   const [a0, a1] = block.along;
@@ -278,9 +271,7 @@ export function makeRailTextures(width: number, anisotropy: number): BoardTextur
   return { map, orm: ormTex };
 }
 
-/**
- * Tangent-space normal map of vertical reeds around a lathe; rows outside [vFrom, vTo] stay flat.
- */
+/** Rows outside [vFrom, vTo] stay flat. */
 export function makeReedingNormalMap(reeds: number, vFrom: number, vTo: number, anisotropy: number): Texture {
   const width = reeds * 16;
   const height = 128;

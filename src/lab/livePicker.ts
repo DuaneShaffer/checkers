@@ -1,6 +1,7 @@
 import type { TrainingManifest } from '../shared/formats.ts';
 import { generationsWithNets } from './data.ts';
-import { button, h } from './dom.ts';
+import { h } from '../ui/dom.ts';
+import { button } from './dom.ts';
 
 export const THINK_PRESETS = [
   { ms: 150, label: 'Quick' },
@@ -27,17 +28,17 @@ export function matchupPicker(manifest: TrainingManifest, preset: { a?: number; 
   const pickA = preset.a !== undefined && gens.some((g) => g.gen === preset.a) ? preset.a : champion;
   const pickB = preset.b !== undefined && gens.some((g) => g.gen === preset.b) ? preset.b : gens[0].gen;
   const select = (id: string, label: string, value: number, swatch: string) => {
-    const sel = h('select', { id, class: 'lab-select' }, ...gens.map((g) =>
+    const sel = h('select', { id, class: 'select' }, ...gens.map((g) =>
       h('option', { value: g.gen, selected: g.gen === value }, `Gen ${g.gen}${g.gen === manifest.champion ? ' · champion' : ''} · ${Math.round(g.elo)}`)));
-    return { sel, field: h('label', { class: 'lab-field', for: id }, h('span', { class: 'lab-field-label' }, h('span', { class: `lab-swatch ${swatch}`, 'aria-hidden': 'true' }), label), sel) };
+    return { sel, field: h('label', { class: 'lab-field', for: id }, h('span', { class: 'lab-field-label' }, h('span', { class: `swatch ${swatch}`, 'aria-hidden': 'true' }), label), sel) };
   };
-  const A = select('live-a', 'Crimson', pickA, 'lab-swatch-crimson');
-  const B = select('live-b', 'Ivory', pickB, 'lab-swatch-ivory');
-  const think = h('select', { id: 'live-ms', class: 'lab-select' }, ...THINK_PRESETS.map((t) =>
+  const A = select('live-a', 'Crimson', pickA, 'swatch-crimson');
+  const B = select('live-b', 'Ivory', pickB, 'swatch-ivory');
+  const think = h('select', { id: 'live-ms', class: 'select' }, ...THINK_PRESETS.map((t) =>
     h('option', { value: t.ms, selected: t.ms === (preset.thinkMs ?? DEFAULT_THINK_MS) }, `${t.label} · ${t.ms < 1000 ? `${t.ms} ms` : `${t.ms / 1000} s`}`)));
   card.append(
     h('div', { class: 'live-fields' }, A.field, B.field,
       h('label', { class: 'lab-field', for: 'live-ms' }, h('span', { class: 'lab-field-label' }, 'Think time'), think)),
-    button('Watch live', () => onStart(Number(A.sel.value), Number(B.sel.value), Number(think.value)), { class: 'lab-btn lab-btn-primary', 'data-testid': 'live-start' }));
+    button('Watch live', () => onStart(Number(A.sel.value), Number(B.sel.value), Number(think.value)), { class: 'btn btn-primary', 'data-testid': 'live-start' }));
   return card;
 }

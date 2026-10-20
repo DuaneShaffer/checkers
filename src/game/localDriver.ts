@@ -1,7 +1,6 @@
-import { Game } from '../engine/game.ts';
+import { Game, gameResult } from '../engine/game.ts';
 import { INITIAL_FEN } from '../engine/position.ts';
-import type { Side } from '../engine/types.ts';
-import type { GameResult } from '../net/protocol.ts';
+import type { GameResult, Side } from '../engine/types.ts';
 import type { DriverSnapshot, GameDriver } from './driver.ts';
 import { SnapshotHub } from './snapshotHub.ts';
 
@@ -11,8 +10,7 @@ export interface LocalDriverOptions {
 }
 
 export function statusResult(game: Game): GameResult | undefined {
-  const st = game.status();
-  return st.over ? { winner: st.winner, reason: st.reason } : undefined;
+  return gameResult(game) ?? undefined;
 }
 
 export function tryPlay(game: Game, move: string): boolean {

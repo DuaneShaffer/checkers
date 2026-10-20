@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyMove, capturedSquares, hasCapture, jumpedSquare, legalMoves } from '../../src/engine/movegen.ts';
+import { applyMove, capturedSquares, hasCapture, jumpedSquare, jumpedSquareOrNull, legalMoves } from '../../src/engine/movegen.ts';
 import { moveToString } from '../../src/engine/notation.ts';
 import { fromFen, pieceAt, toFen } from '../../src/engine/position.ts';
 import type { Sq } from '../../src/engine/types.ts';
@@ -103,6 +103,9 @@ describe('king capture sequences', () => {
     expect(pdn(capturedSquares(m))).toEqual([10, 11, 19, 18]);
     expect(jumpedSquare(13, 6) + 1).toBe(10);
     expect(() => jumpedSquare(13, 17)).toThrow();
+    expect(jumpedSquareOrNull(13, 6)).toBe(9);
+    expect(jumpedSquareOrNull(13, 17)).toBeNull();
+    expect(jumpedSquareOrNull(0, 4)).toBeNull();
   });
 });
 

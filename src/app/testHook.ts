@@ -38,7 +38,7 @@ export function testState(): TestState {
     moves: [...snap.moves],
     turn: c.game.position.turn,
     status: c.status(),
-    mode: appState.route === 'review' ? 'review' : active.mode,
+    mode: active.mode,
     online: snap.online?.status,
     idle: c.idle && !snap.thinking,
   };

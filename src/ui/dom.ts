@@ -29,13 +29,9 @@ export function iconButton(name: IconName, label: string, onClick: () => void, p
   return h('button', { type: 'button', class: 'icon-btn', 'aria-label': label, title: label, onClick, ...props }, icon(name));
 }
 
-export function textButton(label: string, onClick: () => void, props: Props = {}): HTMLButtonElement {
-  return h('button', { type: 'button', class: 'btn', onClick, ...props }, label);
-}
-
 export type IconName =
   | 'undo' | 'flip' | 'flag' | 'sound' | 'mute' | 'home' | 'close' | 'gear' | 'play' | 'users'
-  | 'link' | 'flask' | 'cpu' | 'resume' | 'handshake' | 'review' | 'prev' | 'next' | 'first' | 'last' | 'list';
+  | 'link' | 'flask' | 'cpu' | 'resume' | 'handshake' | 'review' | 'prev' | 'next' | 'first' | 'last' | 'list' | 'pause';
 
 const PATHS: Record<IconName, string> = {
   undo: 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
@@ -59,20 +55,24 @@ const PATHS: Record<IconName, string> = {
   first: 'M17 18l-6-6 6-6M7 6v12',
   last: 'M7 18l6-6-6-6M17 6v12',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  pause: 'M8 5v14M16 5v14',
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+export function s<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, AttrValue> = {}, ...children: Child[]): SVGElementTagNameMap[K] {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attrs)) setAttr(el, key, value);
+  appendChildren(el, children);
+  return el;
+}
+
 export function icon(name: IconName): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  setAttr(svg, 'viewBox', '0 0 24 24');
-  setAttr(svg, 'class', 'icon');
-  setAttr(svg, 'aria-hidden', 'true');
-  setAttr(svg, 'focusable', 'false');
-  const path = document.createElementNS(SVG_NS, 'path');
-  setAttr(path, 'd', PATHS[name]);
-  svg.append(path);
-  return svg;
+  return s('svg', { viewBox: '0 0 24 24', class: 'icon', 'aria-hidden': 'true', focusable: 'false' }, s('path', { d: PATHS[name] }));
+}
+
+export function isTypingTarget(t: EventTarget | null): boolean {
+  return t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 }
 
 export function prefersReducedMotion(): boolean {

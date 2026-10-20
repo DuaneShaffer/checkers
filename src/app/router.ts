@@ -1,7 +1,7 @@
 import type { LevelId } from '../ai/levels.ts';
-import { fromFen } from '../engine/position.ts';
 import type { Side } from '../engine/types.ts';
 import type { RouteParams } from './contracts.ts';
+import { isValidFen } from '../engine/position.ts';
 
 export type RouteName = 'home' | 'ai' | 'local' | 'friend' | 'join' | 'answer' | 'play' | 'lab' | 'review';
 
@@ -76,13 +76,7 @@ export function parseAiParams(query: URLSearchParams): AiRouteOptions {
 }
 
 function validFen(fen: string | null): string | null {
-  if (!fen) return null;
-  try {
-    fromFen(fen);
-    return fen;
-  } catch {
-    return null;
-  }
+  return isValidFen(fen) ? fen : null;
 }
 
 export function aiHash(o: Partial<AiRouteOptions>): string {

@@ -10,6 +10,7 @@ export const GATHER_CAP_MS = 3000;
 const GATHER_QUIET_MS = 700;
 const RESTART_DELAY_MS = 1500;
 const RESTART_COOLDOWN_MS = 8000;
+export const HANDSHAKE_DEADLINE_MS = 25_000;
 const MAX_INBOUND_PER_SECOND = 100;
 
 export interface RtcOptions {
@@ -70,6 +71,8 @@ export class RtcLink implements Transport {
   private readonly messages = new Listeners<WireMsg>();
   private readonly states = new Listeners<LinkState>();
   private restartTimer: ReturnType<typeof setTimeout> | undefined;
+  private handshakeTimer: ReturnType<typeof setTimeout> | undefined;
+  private iceReached = false;
   private lastRestart = 0;
   private inboundWindow = 0;
   private inboundCount = 0;
@@ -86,7 +89,9 @@ export class RtcLink implements Transport {
     this.channel.onmessage = (e) => this.receive(e.data);
     this.pc.oniceconnectionstatechange = () => this.onIceState();
     this.pc.onconnectionstatechange = () => {
-      if (this.pc.connectionState === 'closed') this.shutdown(this.closeReason ?? 'remote');
+      const conn = this.pc.connectionState;
+      if (conn === 'closed') this.shutdown(this.closeReason ?? 'remote');
+      else if (conn === 'failed' && this.state === 'connecting') this.shutdown('failed');
     };
   }
 
@@ -116,6 +121,10 @@ export class RtcLink implements Transport {
       link.close();
       throw e;
     }
+  }
+
+  get reachedPeer(): boolean {
+    return this.iceReached;
   }
 
   get awaitingAnswer(): boolean {
@@ -166,6 +175,7 @@ export class RtcLink implements Transport {
 
   private setState(state: LinkState): void {
     if (this.state === state || this.state === 'closed') return;
+    if (state !== 'connecting') clearTimeout(this.handshakeTimer);
     this.state = state;
     this.states.emit(state);
   }
@@ -174,6 +184,7 @@ export class RtcLink implements Transport {
     if (this.state === 'closed') return;
     this.closeReason = reason;
     clearTimeout(this.restartTimer);
+    clearTimeout(this.handshakeTimer);
     this.channel.onopen = this.channel.onclose = this.channel.onmessage = null;
     this.pc.oniceconnectionstatechange = this.pc.onconnectionstatechange = null;
     try {
@@ -212,6 +223,11 @@ export class RtcLink implements Transport {
     if (ice === 'connected' || ice === 'completed') {
       clearTimeout(this.restartTimer);
       if (this.channel.readyState === 'open') this.setState('open');
+      else if (this.state === 'connecting') this.awaitHandshake();
+      return;
+    }
+    if (ice === 'failed' && this.state === 'connecting') {
+      this.shutdown('failed');
       return;
     }
     if ((ice === 'disconnected' || ice === 'failed') && this.state !== 'connecting') {
@@ -221,6 +237,17 @@ export class RtcLink implements Transport {
         this.restartTimer = setTimeout(() => void this.restartIce().catch(() => {}), ice === 'failed' ? 0 : RESTART_DELAY_MS);
       }
     }
+  }
+
+  // ICE can succeed against an offer whose DTLS session already belongs to another
+  // peer (a reused invite); the handshake then never finishes and the browser never fails it.
+  private awaitHandshake(): void {
+    if (this.iceReached) return;
+    this.iceReached = true;
+    this.handshakeTimer = setTimeout(() => {
+      const finishing = this.pc.connectionState === 'connected' || this.channel.readyState === 'open';
+      if (this.state === 'connecting' && !finishing) this.shutdown('failed');
+    }, HANDSHAKE_DEADLINE_MS);
   }
 
   private async restartIce(): Promise<void> {

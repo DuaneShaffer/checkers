@@ -1,6 +1,8 @@
 import type { Side } from '../engine/types.ts';
+import { fullMoveLabel } from '../game/plies.ts';
 import type { ConnStatus } from '../net/protocol.ts';
 import { h, icon, iconButton, setAttr } from './dom.ts';
+import { anyDialogOpen } from './modal.ts';
 
 export interface HudActions {
   home(): void;
@@ -22,6 +24,7 @@ export interface HudModel {
   over: boolean;
   winner: Side | null;
   status: string;
+  chipStatus: string;
   statusTone: 'neutral' | 'alert' | 'over';
   moves: readonly string[];
   firstMover: Side;
@@ -29,6 +32,7 @@ export interface HudModel {
   canResign: boolean;
   canOfferDraw: boolean;
   canRematch: boolean;
+  rematchPending: boolean;
   soundOn: boolean;
   connection?: { status: ConnStatus; label: string };
 }
@@ -46,15 +50,17 @@ interface Chip {
   swatch: HTMLElement;
   name: HTMLElement;
   count: HTMLElement;
+  status: HTMLElement;
 }
 
 function playerChip(pos: 'top' | 'bottom'): Chip {
   const swatch = h('span', { class: 'swatch', 'aria-hidden': 'true' });
   const name = h('span', { class: 'pc-name' });
   const count = h('span', { class: 'pc-count' });
+  const status = h('span', { class: 'pc-status', 'aria-hidden': 'true' });
   const dots = h('span', { class: 'thinking-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
-  const el = h('div', { class: 'player-chip', 'data-pos': pos }, swatch, h('span', { class: 'pc-text' }, name, count), dots);
-  return { el, swatch, name, count };
+  const el = h('div', { class: 'player-chip', 'data-pos': pos }, swatch, h('span', { class: 'pc-text' }, name, count), status, dots);
+  return { el, swatch, name, count, status };
 }
 
 const SIDE_CLASS: Record<Side, string> = { 0: 'crimson', 1: 'ivory' };
@@ -106,6 +112,10 @@ export function createHud(opts: { mode: string; title: string; subtitle?: string
     ),
   );
 
+  actions.addEventListener('click', (e) => {
+    if (e.detail > 0 && !anyDialogOpen()) slot.focus({ preventScroll: true });
+  });
+
   let lastMovesKey = '';
 
   const setTitle = (t: string, sub?: string) => {
@@ -125,6 +135,9 @@ export function createHud(opts: { mode: string; title: string; subtitle?: string
     setAttr(chip.el, 'data-active', !m.over && m.turn === side);
     setAttr(chip.el, 'data-thinking', m.thinking === side);
     setAttr(chip.el, 'data-winner', m.over && m.winner === side);
+    const statusSide = m.over ? m.orientation : m.turn;
+    chip.status.textContent = side === statusSide ? m.chipStatus : '';
+    chip.status.dataset.tone = m.statusTone;
   }
 
   function paintMoves(m: HudModel) {
@@ -132,11 +145,12 @@ export function createHud(opts: { mode: string; title: string; subtitle?: string
     if (key === lastMovesKey) return;
     lastMovesKey = key;
     const items: HTMLElement[] = [];
-    const offset = m.firstMover === 1 ? 1 : 0;
-    for (let i = -offset; i < m.moves.length; i += 2) {
+    const start = m.firstMover === 1 ? -1 : 0;
+    for (let i = start; i < m.moves.length; i += 2) {
       const first = i >= 0 ? m.moves[i] : '…';
       const second = m.moves[i + 1];
-      items.push(h('li', {}, h('span', { class: 'ml-n' }, `${(i + offset) / 2 + 1}.`), h('span', {}, first), h('span', {}, second ?? '')));
+      const n = fullMoveLabel(m.firstMover, Math.max(i, 0)).number;
+      items.push(h('li', {}, h('span', { class: 'ml-n' }, `${n}.`), h('span', {}, first), h('span', {}, second ?? '')));
     }
     moveList.replaceChildren(...items);
     moveList.scrollTop = moveList.scrollHeight;
@@ -160,7 +174,11 @@ export function createHud(opts: { mode: string; title: string; subtitle?: string
       if (undo) undo.disabled = !m.canUndo;
       if (resign) resign.hidden = !m.canResign;
       if (draw) draw.hidden = !m.canOfferDraw;
-      if (rematch) rematch.hidden = !m.canRematch;
+      if (rematch) {
+        rematch.hidden = !m.canRematch;
+        rematch.disabled = m.rematchPending;
+        rematch.textContent = m.rematchPending ? 'Rematch offered' : 'Play again';
+      }
       sound.replaceChildren(icon(m.soundOn ? 'sound' : 'mute'));
       setAttr(sound, 'aria-label', m.soundOn ? 'Mute sound' : 'Unmute sound');
       setAttr(sound, 'title', m.soundOn ? 'Mute sound' : 'Unmute sound');

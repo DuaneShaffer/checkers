@@ -1,5 +1,6 @@
 import type { BaselineId, GenerationSummary, TrainingManifest } from '../shared/formats.ts';
-import { compactNumber, h, s, signed } from './dom.ts';
+import { h, s } from '../ui/dom.ts';
+import { compactNumber, signed } from './dom.ts';
 
 export interface EloChartOptions {
   manifest: TrainingManifest;

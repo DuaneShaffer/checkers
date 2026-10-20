@@ -13,7 +13,7 @@ export interface Highlights {
 }
 
 export interface BoardView {
-  setPosition(pos: Position, ids?: PieceIds): void;
+  setPosition(pos: Position, ids: PieceIds): void;
   sync(pos: Position, ids: PieceIds, opts?: { duration?: number }): Promise<void>;
   playMove(move: Move, opts?: { speed?: number; fromHop?: number }): Promise<void>;
   previewHop(from: Sq, to: Sq, captured: Sq | null): Promise<void>;

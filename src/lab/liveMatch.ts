@@ -2,9 +2,8 @@ import type { AppContext, GameScreenHandle, Screen } from '../app/contracts.ts';
 import type { LevelSpec } from '../ai/levels.ts';
 import type { AiClientApi, NetId } from '../ai/protocol.ts';
 import { Game } from '../engine/game.ts';
-import type { Side } from '../engine/types.ts';
+import type { GameResult, Side } from '../engine/types.ts';
 import type { DriverSnapshot, GameDriver } from '../game/driver.ts';
-import type { GameResult } from '../net/protocol.ts';
 import type { TrainingManifest } from '../shared/formats.ts';
 import type { LabData } from './data.ts';
 import { THINK_PRESETS, liveRoute } from './livePicker.ts';
@@ -85,7 +84,6 @@ export class LiveMatchDriver implements GameDriver {
     if (this.disposed) return;
     this.disposed = true;
     this.listeners.clear();
-    this.opts.client.cancel();
   }
 
   private emit(): void {

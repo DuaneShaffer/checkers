@@ -12,7 +12,7 @@ export interface Settings {
 }
 
 export interface GameScreenOptions {
-  mode: 'local' | 'ai' | 'online' | 'live-match';
+  mode: 'local' | 'ai' | 'online' | 'live-match' | 'review';
   orientation: Side;
   title: string;
   subtitle?: string;

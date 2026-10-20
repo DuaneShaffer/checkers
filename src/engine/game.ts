@@ -2,7 +2,7 @@ import { applyMove, isIrreversible, legalMoves } from './movegen.ts';
 import { matchMove, moveToString } from './notation.ts';
 import { INITIAL_FEN, fromFen, samePosition, toFen } from './position.ts';
 import { NO_PROGRESS_PLIES } from './types.ts';
-import type { GameStatus, Move, Position, ResultStr, Side } from './types.ts';
+import type { GameResult, GameStatus, Move, Position, ResultStr, Side } from './types.ts';
 import { hashHi, hashLo } from './zobrist.ts';
 
 export interface GameOptions {
@@ -25,6 +25,11 @@ export class IllegalMoveError extends Error {
 export function resultString(winner: Side | null): ResultStr {
   if (winner === null) return '1/2-1/2';
   return winner === 0 ? '1-0' : '0-1';
+}
+
+export function gameResult(game: Game): GameResult | null {
+  const st = game.status();
+  return st.over ? { winner: st.winner, reason: st.reason } : null;
 }
 
 export class Game {

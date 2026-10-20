@@ -1,7 +1,6 @@
 import { popcount } from '../engine/bitboard.ts';
 import { sidePieces } from '../engine/position.ts';
-import type { Move, Position, Side } from '../engine/types.ts';
-import type { GameResult } from '../net/protocol.ts';
+import type { GameResult, Move, Position, Side } from '../engine/types.ts';
 
 export const SIDE_NAMES: Record<Side, string> = { 0: 'Crimson', 1: 'Ivory' };
 
@@ -49,10 +48,20 @@ export interface Announcer {
 }
 
 export function createAnnouncer(politeEl: HTMLElement | null, assertiveEl: HTMLElement | null): Announcer {
+  const queued = new Map<HTMLElement, string[]>();
   const say = (el: HTMLElement | null, text: string) => {
     if (!el) return;
+    const parts = queued.get(el);
+    if (parts) {
+      if (!parts.includes(text)) parts.push(text);
+      return;
+    }
+    queued.set(el, [text]);
     el.textContent = '';
-    setTimeout(() => (el.textContent = text), 40);
+    setTimeout(() => {
+      el.textContent = queued.get(el)?.join('. ') ?? text;
+      queued.delete(el);
+    }, 40);
   };
   return {
     polite: (text) => say(politeEl, text),

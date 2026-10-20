@@ -17,7 +17,7 @@ const withTestFlag = (url: string) => url.replace('/#/', '/?test=1#/');
 
 async function online(page: Page): Promise<OnlineView | null> {
   return page.evaluate(() => {
-    const o = window.__checkersOnline;
+    const o = window.__checkers?.online;
     if (!o) return null;
     const s = o.snapshot();
     return { status: o.status(), role: o.role, moves: s.moves, mySides: s.mySides, result: s.result, incoming: s.online?.incomingOffer };
@@ -29,8 +29,7 @@ const statusOf = async (page: Page) => (await online(page))?.status ?? 'none';
 async function playMove(page: Page, move: string): Promise<boolean> {
   return page.evaluate((m) => {
     const shell = window.__checkers;
-    if (shell && shell.state().mode === 'online') return shell.playMove(m);
-    return window.__checkersOnline?.playMove(m) ?? false;
+    return shell?.state().mode === 'online' ? shell.playMove(m) : false;
   }, move);
 }
 
@@ -56,7 +55,7 @@ async function createInvite(host: Page, name: string): Promise<string> {
   await host.getByLabel('Your name').fill(name);
   await host.getByRole('button', { name: 'Create invite link' }).click();
   const link = host.locator('[data-link-kind="invite"]');
-  await expect(link).toBeVisible({ timeout: 20_000 });
+  await expect(link).toBeVisible({ timeout: PEER_TIMEOUT });
   await expect(host.getByText('Keep this tab open')).toBeVisible();
   return (await link.getAttribute('data-url'))!;
 }
@@ -66,7 +65,7 @@ async function acceptInvite(guest: Page, invite: string, name: string): Promise<
   await guest.getByLabel('Your name').fill(name);
   await guest.getByRole('button', { name: 'Join game' }).click();
   const reply = guest.locator('[data-link-kind="reply"]');
-  await expect(reply).toBeVisible({ timeout: 20_000 });
+  await expect(reply).toBeVisible({ timeout: PEER_TIMEOUT });
   return (await reply.getAttribute('data-url'))!;
 }
 
@@ -99,8 +98,8 @@ test.describe('online play over a two-link handshake', () => {
     expect(reply).toMatch(/\/checkers\/#\/answer\/[A-Za-z0-9_-]+$/);
 
     await pasteReply(host, reply);
-    await expect(host).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: 30_000 });
-    await expect(guest).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: 30_000 });
+    await expect(host).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: PEER_TIMEOUT });
+    await expect(guest).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: PEER_TIMEOUT });
     await expectConnected(host, guest);
     const code = host.url().split('/').pop()!;
     expect(guest.url().endsWith(code)).toBe(true);
@@ -125,40 +124,44 @@ test.describe('online play over a two-link handshake', () => {
 
     await guest.getByRole('button', { name: 'Resume link' }).first().click();
     const resumeLink = guest.locator('.ol-resume-dialog [data-link-kind="invite"]');
-    await expect(resumeLink).toBeVisible({ timeout: 20_000 });
+    await expect(resumeLink).toBeVisible({ timeout: PEER_TIMEOUT });
     const resumeUrl = (await resumeLink.getAttribute('data-url'))!;
+    await guest.locator('.ol-resume-dialog').getByRole('button', { name: 'Close' }).first().click();
+    await expect(resumeLink).toBeHidden();
 
     await host.goto(withTestFlag(resumeUrl));
-    await expect(host.getByText('Reconnect with Gus')).toBeVisible();
+    await expect(host.getByText('Reconnect with Gus')).toBeVisible({ timeout: PEER_TIMEOUT });
     await host.getByRole('button', { name: 'Reconnect' }).click();
     const resumeReply = host.locator('[data-link-kind="reply"]');
-    await expect(resumeReply).toBeVisible({ timeout: 20_000 });
+    await expect(resumeReply).toBeVisible({ timeout: PEER_TIMEOUT });
+    await guest.getByRole('button', { name: 'Resume link' }).first().click();
+    await expect(resumeLink).toHaveAttribute('data-url', resumeUrl, { timeout: PEER_TIMEOUT });
     await pasteReply(guest, (await resumeReply.getAttribute('data-url'))!);
-    await expect(host).toHaveURL(new RegExp(`#/play/${code}$`), { timeout: 30_000 });
+    await expect(host).toHaveURL(new RegExp(`#/play/${code}$`), { timeout: PEER_TIMEOUT });
     await expectConnected(host, guest);
     await expectMoves(['11-15', '23-19', '8-11'], host, guest);
 
     expect(await playMove(guest, '22-17')).toBe(true);
     await expectMoves(['11-15', '23-19', '8-11', '22-17'], host, guest);
 
-    await host.evaluate(() => window.__checkersOnline!.offer('draw'));
-    await expect.poll(async () => (await online(guest))?.incoming).toBe('draw');
+    await host.evaluate(() => window.__checkers!.online!.offer('draw'));
+    await expect.poll(async () => (await online(guest))?.incoming, { timeout: PEER_TIMEOUT }).toBe('draw');
     const drawDialog = guest.getByRole('dialog').filter({ hasText: 'offers a draw' });
-    await expect(drawDialog).toBeVisible();
+    await expect(drawDialog).toBeVisible({ timeout: PEER_TIMEOUT });
     await drawDialog.getByRole('button', { name: 'Accept' }).click();
-    for (const page of [host, guest]) await expect.poll(async () => (await online(page))?.result).toEqual({ winner: null, reason: 'agreement' });
+    for (const page of [host, guest]) await expect.poll(async () => (await online(page))?.result, { timeout: PEER_TIMEOUT }).toEqual({ winner: null, reason: 'agreement' });
 
-    await expect(host.locator('dialog.result-dialog')).toBeVisible();
+    await expect(host.locator('dialog.result-dialog')).toBeVisible({ timeout: PEER_TIMEOUT });
     const guestResult = guest.locator('dialog.result-dialog');
-    await expect(guestResult).toBeVisible();
+    await expect(guestResult).toBeVisible({ timeout: PEER_TIMEOUT });
     await guestResult.getByRole('button', { name: 'Play again' }).click();
-    await expect.poll(async () => (await online(host))?.incoming).toBe('rematch');
+    await expect.poll(async () => (await online(host))?.incoming, { timeout: PEER_TIMEOUT }).toBe('rematch');
     const rematchDialog = host.getByRole('dialog').filter({ hasText: 'wants a rematch' });
-    await expect(rematchDialog).toBeVisible();
+    await expect(rematchDialog).toBeVisible({ timeout: PEER_TIMEOUT });
     await rematchDialog.getByRole('button', { name: 'Accept' }).click();
     for (const page of [host, guest]) {
-      await expect.poll(async () => (await online(page))?.moves).toEqual([]);
-      await expect.poll(async () => (await online(page))?.result).toBeUndefined();
+      await expect.poll(async () => (await online(page))?.moves, { timeout: PEER_TIMEOUT }).toEqual([]);
+      await expect.poll(async () => (await online(page))?.result, { timeout: PEER_TIMEOUT }).toBeUndefined();
     }
     expect((await online(host))!.mySides).toEqual([1]);
     expect((await online(guest))!.mySides).toEqual([0]);
@@ -166,8 +169,8 @@ test.describe('online play over a two-link handshake', () => {
     expect(await playMove(guest, '9-13')).toBe(true);
     await expectMoves(['9-13'], host, guest);
 
-    await host.evaluate(() => window.__checkersOnline!.resign());
-    for (const page of [host, guest]) await expect.poll(async () => (await online(page))?.result).toEqual({ winner: 0, reason: 'resign' });
+    await host.evaluate(() => window.__checkers!.online!.resign());
+    for (const page of [host, guest]) await expect.poll(async () => (await online(page))?.result, { timeout: PEER_TIMEOUT }).toEqual({ winner: 0, reason: 'resign' });
 
   });
 
@@ -179,9 +182,9 @@ test.describe('online play over a two-link handshake', () => {
 
     const replyTab = await host.context().newPage();
     await replyTab.goto(withTestFlag(reply));
-    await expect(replyTab.getByText('Connected — return to your game tab')).toBeVisible({ timeout: 15_000 });
+    await expect(replyTab.getByText('Connected — return to your game tab')).toBeVisible({ timeout: PEER_TIMEOUT });
 
-    await expect(host).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: 30_000 });
+    await expect(host).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: PEER_TIMEOUT });
     await expectConnected(host, guest);
     expect(await playMove(host, '10-14')).toBe(true);
     await expectMoves(['10-14'], host, guest);
@@ -196,10 +199,13 @@ test.describe('online play over a two-link handshake', () => {
     const invite = await createInvite(host, 'Hana');
     const reply = await acceptInvite(guest, invite, 'Gus');
     await host.goto(withTestFlag(reply));
-    await expect(host).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: 30_000 });
+    await expect(host).toHaveURL(/#\/play\/[0-9A-Z]{10}$/, { timeout: PEER_TIMEOUT });
     await expectConnected(host, guest);
     await guest.goto(withTestFlag(reply));
     await expect(guest.getByText('This is your own reply link')).toBeVisible();
+    await guest.goto(withTestFlag(invite));
+    await expect(guest.getByText('This invite was already used')).toBeVisible();
+    await expect(guest.getByRole('link', { name: 'Back to the game' })).toBeVisible();
   });
 
   test('a stale or foreign reply shows a clear message', async ({ browser }) => {
@@ -210,7 +216,7 @@ test.describe('online play over a two-link handshake', () => {
 
     const stranger = await newPlayer(browser, 'stranger');
     await stranger.goto(withTestFlag(invite.replace('#/join/', '#/answer/')));
-    await expect(stranger.getByText(/Paste this into your invite page|didn’t work|couldn’t use/)).toBeVisible({ timeout: 15_000 });
+    await expect(stranger.getByText(/Paste this into your invite page|didn’t work|couldn’t use/)).toBeVisible({ timeout: PEER_TIMEOUT });
     await stranger.goto('./?test=1#/join/not-a-real-blob');
     await expect(stranger.getByText('That link didn’t work')).toBeVisible();
 
@@ -223,7 +229,7 @@ test.describe('online screens on a phone', () => {
   test('invite screen fits and has large touch targets', async ({ page }) => {
     await page.goto('./?test=1#/friend');
     await page.getByRole('button', { name: 'Create invite link' }).click();
-    await expect(page.locator('[data-link-kind="invite"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-link-kind="invite"]')).toBeVisible({ timeout: PEER_TIMEOUT });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     const small = await page.evaluate(() =>

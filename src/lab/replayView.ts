@@ -1,14 +1,19 @@
 import type { AppContext } from '../app/contracts.ts';
+import { aiHash } from '../app/router.ts';
+import { legalMoves } from '../engine/movegen.ts';
+import { toFen } from '../engine/position.ts';
 import type { GameRecord, TrainingManifest } from '../shared/formats.ts';
 import type { BoardView } from '../scene/types.ts';
 import { generationsWithReplays, playerName, type LabData } from './data.ts';
-import { button, h, icon, s } from './dom.ts';
-import { miniBoard } from './miniBoard.ts';
+import { h, icon, isTypingTarget, s } from '../ui/dom.ts';
+import { miniBoard } from '../ui/miniBoard.ts';
+import { SIDE_NAMES } from '../game/announcer.ts';
+import { fullMoveLabel } from '../game/plies.ts';
+import { button, edgeFades } from './dom.ts';
 import {
   buildTimeline,
   clampPly,
   evalToWinProbability,
-  fullMoveLabel,
   type ReplayTimeline,
 } from './replayTimeline.ts';
 
@@ -16,6 +21,7 @@ export const REPLAY_SPEEDS = [0.5, 1, 2, 4] as const;
 const AUTOPLAY_GAP_MS = 650;
 const SNAP_MS = 120;
 const URL_THROTTLE_MS = 300;
+const EDGE_FADE_PX = 24;
 
 export interface ReplayParams {
   ctx: AppContext;
@@ -39,8 +45,8 @@ export function replayRoute(gen: number, id: string, ply?: number): string {
 }
 
 export function resultText(rec: GameRecord): string {
-  if (rec.result === '1-0') return 'Crimson wins';
-  if (rec.result === '0-1') return 'Ivory wins';
+  if (rec.result === '1-0') return `${SIDE_NAMES[0]} wins`;
+  if (rec.result === '0-1') return `${SIDE_NAMES[1]} wins`;
   return 'Draw';
 }
 
@@ -55,6 +61,19 @@ const REASON_TEXT: Record<GameRecord['reason'], string> = {
 
 export function reasonText(rec: GameRecord): string {
   return REASON_TEXT[rec.reason];
+}
+
+const SHORT_REASON_TEXT: Record<GameRecord['reason'], string> = {
+  'no-moves': 'no\u00a0moves',
+  repetition: 'repetition',
+  'no-progress': '80-ply\u00a0rule',
+  'max-plies': 'ply\u00a0cap',
+  resign: 'resigned',
+  agreement: 'agreed',
+};
+
+export function shortReasonText(rec: GameRecord): string {
+  return SHORT_REASON_TEXT[rec.reason];
 }
 
 export function kindText(rec: GameRecord): string {
@@ -95,7 +114,7 @@ function svgAdapter(t: ReplayTimeline, slot: HTMLElement): ReplayBoard {
   slot.append(holder);
   const draw = (ply: number) => {
     const p = t.plies[ply - 1];
-    holder.replaceChildren(miniBoard(t.positions[ply], { lastMove: p ? [p.move.from, p.move.to] : null, label: `Board after ply ${ply}` }));
+    holder.replaceChildren(miniBoard(t.positions[ply], { lastMove: p ? [p.move.from, p.move.to] : null, label: `Board after ply ${ply}`, className: 'lab-mini' }));
   };
   return {
     show: draw,
@@ -103,12 +122,6 @@ function svgAdapter(t: ReplayTimeline, slot: HTMLElement): ReplayBoard {
     snap: async (ply) => draw(ply),
     dispose: () => holder.remove(),
   };
-}
-
-function isTypingTarget(t: EventTarget | null): boolean {
-  const el = t as HTMLElement | null;
-  if (!el?.tagName) return false;
-  return el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -133,7 +146,7 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
   const evalLabel = h('span', { class: 'eval-label lab-num', 'aria-hidden': 'true' });
   const evalBar = h('span', { class: 'eval-bar', role: 'meter', 'aria-label': 'Evaluation: Crimson win chance', 'aria-valuemin': 0, 'aria-valuemax': 100, 'data-testid': 'replay-eval' }, evalFill);
 
-  const back = button([icon('back'), h('span', {}, `Gen ${gen}`)], () => ctx.navigate(`#/lab/${gen}`), { class: 'lab-back', 'aria-label': `Back to generation ${gen}` });
+  const back = button([icon('prev'), h('span', {}, `Gen ${gen}`)], () => ctx.navigate(`#/lab/${gen}`), { class: 'btn lab-back', 'aria-label': `Back to generation ${gen}` });
   const topbar = h('header', { class: 'replay-top' },
     back,
     h('div', { class: 'replay-title' },
@@ -141,9 +154,9 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
       h('p', { class: 'replay-sub' }, `${resultText(record)} · ${reasonText(record)} · ${L} plies`)));
 
   const players = h('div', { class: `replay-players${t.evals.length ? ' has-eval' : ''}` },
-    h('span', { class: 'lab-player' }, h('span', { class: 'lab-swatch lab-swatch-crimson', 'aria-hidden': 'true' }), playerName(manifest, record.black)),
+    h('span', { class: 'lab-player' }, h('span', { class: 'swatch swatch-crimson', 'aria-hidden': 'true' }), playerName(manifest, record.black)),
     t.evals.length ? h('span', { class: 'eval-wrap' }, evalBar, evalLabel) : h('span', { class: 'lab-vs' }, 'vs'),
-    h('span', { class: 'lab-player lab-player-end' }, playerName(manifest, record.white), h('span', { class: 'lab-swatch lab-swatch-ivory', 'aria-hidden': 'true' })));
+    h('span', { class: 'lab-player lab-player-end' }, playerName(manifest, record.white), h('span', { class: 'swatch swatch-ivory', 'aria-hidden': 'true' })));
 
   const readout = h('div', { class: 'replay-readout', 'aria-hidden': 'true' },
     h('span', { class: 'lab-num', 'data-testid': 'replay-ply' }),
@@ -154,11 +167,11 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
   const scrub = h('input', { type: 'range', min: 0, max: L, step: 1, value: ply, class: 'replay-scrub', 'aria-label': 'Ply', 'data-testid': 'replay-scrub' });
   const scrubWrap = h('div', { class: 'replay-scrub-wrap' }, sparkline(t), scrub);
 
-  const btnFirst = button(icon('first'), () => { pause(); snapTo(0); }, { class: 'lab-tbtn', 'aria-label': 'First position' });
-  const btnBack = button(icon('prev'), () => stepBack(), { class: 'lab-tbtn', 'aria-label': 'Step back', 'data-testid': 'replay-back' });
-  const btnPlay = button(icon('play'), () => togglePlay(), { class: 'lab-tbtn lab-tbtn-primary', 'aria-label': 'Play', 'data-testid': 'replay-play' });
-  const btnFwd = button(icon('next'), () => stepForward(), { class: 'lab-tbtn', 'aria-label': 'Step forward', 'data-testid': 'replay-forward' });
-  const btnLast = button(icon('last'), () => { pause(); snapTo(L); }, { class: 'lab-tbtn', 'aria-label': 'Last position' });
+  const btnFirst = button(icon('first'), () => { pause(); snapTo(0); }, { class: 'icon-btn lab-tbtn', 'aria-label': 'First position' });
+  const btnBack = button(icon('prev'), () => stepBack(), { class: 'icon-btn lab-tbtn', 'aria-label': 'Step back', 'data-testid': 'replay-back' });
+  const btnPlay = button(icon('play'), () => togglePlay(), { class: 'btn btn-primary lab-tbtn lab-tbtn-primary', 'aria-label': 'Play', 'data-testid': 'replay-play' });
+  const btnFwd = button(icon('next'), () => stepForward(), { class: 'icon-btn lab-tbtn', 'aria-label': 'Step forward', 'data-testid': 'replay-forward' });
+  const btnLast = button(icon('last'), () => { pause(); snapTo(L); }, { class: 'icon-btn lab-tbtn', 'aria-label': 'Last position' });
   const transport = h('div', { class: 'replay-transport', role: 'group', 'aria-label': 'Playback' }, btnFirst, btnBack, btnPlay, btnFwd, btnLast);
 
   const speedButtons = REPLAY_SPEEDS.map((v) => button(`${v}×`, () => setSpeed(v), { class: 'lab-seg', 'aria-pressed': v === speed ? 'true' : 'false', 'data-speed': v }));
@@ -170,9 +183,16 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
   buildMoveList();
 
   const live = h('div', { class: 'sr-only', 'aria-live': 'polite' });
-  const extras = h('div', { class: 'replay-extras' });
+  const playHere = button([icon('cpu'), h('span', {}, 'Play from here')], () => {
+    pause();
+    const pos = t.positions[ply];
+    ctx.navigate(aiHash({ level: 4, side: pos.turn, fen: toFen(pos), gen }));
+  }, { class: 'btn', 'aria-label': 'Play from here vs AI', title: 'Play from here vs AI', 'data-testid': 'replay-play-here' });
+  const extras = h('div', { class: 'replay-extras' }, playHere);
+  const movesWrap = h('div', { class: 'lab-moves-wrap' }, moveList);
+  const fadeCleanups = [edgeFades(movesWrap), edgeFades(extras)];
   const panel = h('section', { class: 'replay-panel', 'aria-label': 'Replay controls' },
-    players, h('div', { class: 'replay-row' }, readout, speedRow, speedCycle), scrubWrap, transport, h('div', { class: 'lab-moves-wrap' }, moveList), extras, live);
+    players, h('div', { class: 'replay-row' }, readout, speedRow, speedCycle), scrubWrap, transport, movesWrap, extras, live);
   const root = h('div', { class: 'lab-replay', 'data-testid': 'lab-replay' }, topbar, stage, panel);
   host.append(root);
 
@@ -229,6 +249,7 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
     btnFirst.disabled = ply === 0;
     btnFwd.disabled = ply === L;
     btnLast.disabled = ply === L;
+    playHere.disabled = legalMoves(t.positions[ply]).length === 0;
     btnPlay.replaceChildren(icon(playing ? 'pause' : 'play'));
     btnPlay.setAttribute('aria-label', playing ? 'Pause' : ply === L ? 'Replay from start' : 'Play');
     for (const b of moveButtons) b.classList.remove('is-current');
@@ -249,12 +270,10 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
   }
 
   function keepVisible(el: HTMLElement): void {
-    const box = moveList.parentElement;
-    if (!box) return;
     const r = el.getBoundingClientRect();
-    const b = box.getBoundingClientRect();
-    if (r.top < b.top || r.bottom > b.bottom) box.scrollTop += r.top - b.top - (b.height - r.height) / 2;
-    if (r.left < b.left || r.right > b.right) box.scrollLeft += r.left - b.left - (b.width - r.width) / 2;
+    const b = movesWrap.getBoundingClientRect();
+    if (r.top < b.top || r.bottom > b.bottom) movesWrap.scrollTop += r.top - b.top - (b.height - r.height) / 2;
+    if (r.left < b.left + EDGE_FADE_PX || r.right > b.right - EDGE_FADE_PX) movesWrap.scrollLeft += r.left - b.left - (b.width - r.width) / 2;
   }
 
   function revealCurrent(): void {
@@ -386,14 +405,14 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
   }
   window.addEventListener('keydown', onKey);
   const movesObserver = new ResizeObserver(() => revealCurrent());
-  movesObserver.observe(moveList.parentElement!);
+  movesObserver.observe(movesWrap);
 
   async function buildExtras(): Promise<void> {
     const next = await nextGenerationGame(p).catch(() => null);
     if (disposed) return;
     queueMicrotask(revealCurrent);
     if (next) {
-      extras.append(button([h('span', {}, `Same game, gen ${next.gen}`), icon('chevronRight')], () => ctx.navigate(replayRoute(next.gen, next.id)), { class: 'lab-btn lab-btn-ghost', 'data-testid': 'replay-next-gen' }));
+      extras.append(button([h('span', {}, `Same game, gen ${next.gen}`), icon('next')], () => ctx.navigate(replayRoute(next.gen, next.id)), { class: 'btn', 'data-testid': 'replay-next-gen' }));
     }
     if (record.moves.length >= 3) {
       const compare = button('Same opening, other gens', () => {
@@ -408,7 +427,7 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
           compare.textContent = 'Same opening, other gens';
           ctx.toast("Couldn't search other generations", 'error');
         });
-      }, { class: 'lab-btn lab-btn-ghost' });
+      }, { class: 'btn' });
       extras.append(compare);
     }
   }
@@ -416,10 +435,12 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
   function sameOpeningList(hits: { gen: number; id: string; rec: GameRecord }[]): HTMLElement {
     const opening = record.moves.slice(0, 3).join(' ');
     if (!hits.length) return h('p', { class: 'lab-muted' }, `No other sampled game opens ${opening}.`);
+    const chips = h('div', { class: 'lab-chip-row' }, ...hits.map((hit) =>
+      button(`Gen ${hit.gen} · ${resultText(hit.rec)}`, () => ctx.navigate(replayRoute(hit.gen, hit.id)), { class: 'chip' })));
+    fadeCleanups.push(edgeFades(chips));
     return h('div', { class: 'same-opening' },
       h('p', { class: 'lab-muted' }, `Opening ${opening} in other generations`),
-      h('div', { class: 'lab-chip-row' }, ...hits.map((hit) =>
-        button(`Gen ${hit.gen} · ${resultText(hit.rec)}`, () => ctx.navigate(replayRoute(hit.gen, hit.id)), { class: 'lab-chip' }))));
+      chips);
   }
 
   return {
@@ -431,6 +452,7 @@ export function mountReplay(host: HTMLElement, p: ReplayParams): { dispose(): vo
       if (urlTimer) clearTimeout(urlTimer);
       window.removeEventListener('keydown', onKey);
       movesObserver.disconnect();
+      for (const fn of fadeCleanups.splice(0)) fn();
       board.dispose();
       root.remove();
     },

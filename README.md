@@ -18,6 +18,8 @@ npm run e2e          # Playwright (npx playwright install chromium first)
 npm run build
 ```
 
+The dev server serves `public/training/**` straight from disk on every request (the `live-training-files` plugin in `vite.config.ts`), so output from a run with `--publish-every` appears on reload without restarting the server or setting `POLL=1`. `POLL=1` is still needed for source edits on `/mnt/c`, where file watching misses changes (including CSS).
+
 ## Training
 
 ```sh

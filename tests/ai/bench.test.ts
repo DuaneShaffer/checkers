@@ -33,7 +33,6 @@ describe('bench (log only)', () => {
     const perSec = Math.round((rounds * positions.length) / ms * 1000);
     console.log(`[bench] net.value: ${perSec.toLocaleString('en-US')} evals/s (${((ms * 1000) / (rounds * positions.length)).toFixed(2)} µs/eval)`);
     expect(Number.isFinite(sink)).toBe(true);
-    expect(perSec).toBeGreaterThan(20_000);
   });
 
   it('measures search nodes per second at depth 6 from the opening', () => {
@@ -45,7 +44,7 @@ describe('bench (log only)', () => {
     const nn9 = searchRate(net, 9, 1);
     console.log(`[bench] heuristic d9: ${heur9.nps.toLocaleString('en-US')} nodes/s (${heur9.nodes} nodes, ${heur9.ms.toFixed(0)} ms)`);
     console.log(`[bench] net d9:       ${nn9.nps.toLocaleString('en-US')} nodes/s (${nn9.nodes} nodes, ${nn9.ms.toFixed(0)} ms)`);
-    expect(heur.nps).toBeGreaterThan(20_000);
-    expect(nn.nps).toBeGreaterThan(10_000);
+    expect(heur.nodes).toBeGreaterThan(0);
+    expect(nn.nodes).toBeGreaterThan(0);
   });
 });

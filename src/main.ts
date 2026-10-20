@@ -53,7 +53,6 @@ function loadBoard(): Promise<BoardViewExt> {
   boardPromise ??= import('./scene/boardView.ts')
     .then((m) => m.createBoardViewExt(stageHost, { testMode, quality: getSettings().quality }))
     .then((board) => {
-      if (testMode) board.setInstantAnimations(true);
       appState.board = board;
       if (boardClaimedBy !== renderToken) hideBoard(board);
       return board;

@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { legalMoves } from '../../src/engine/movegen.ts';
+import { jumpedSquareOrNull, legalMoves } from '../../src/engine/movegen.ts';
 import { moveToString } from '../../src/engine/notation.ts';
 import { fromFen, initialPosition } from '../../src/engine/position.ts';
 import {
   type SelectionState,
   cancelSelection,
   createSelection,
-  jumpedBetween,
   selectionView,
   tapSquare,
 } from '../../src/game/selection.ts';
@@ -52,9 +51,11 @@ describe('selection: quiet moves', () => {
     expect(state.prefix).toEqual([]);
   });
 
-  it('deselects when the selected piece is tapped again or the tap misses the board', () => {
+  it('deselects when the selected piece is tapped again but keeps it when a tap misses the board', () => {
     expect(taps(fromPosition(), 11, 11).effect).toEqual({ kind: 'deselect', revertHops: 0 });
-    expect(taps(fromPosition(), 11, null).effect).toEqual({ kind: 'deselect', revertHops: 0 });
+    const missed = taps(fromPosition(), 11, null);
+    expect(missed.effect).toEqual({ kind: 'none' });
+    expect(missed.state.prefix).toEqual([sq(11)]);
   });
 
   it('switches selection to another movable piece', () => {
@@ -141,7 +142,7 @@ describe('selection: captures and multi-jumps', () => {
     expect(cancelSelection(mid).effect).toEqual({ kind: 'deselect', revertHops: 2 });
     expect(tapSquare(mid, sq(19)).effect).toEqual({ kind: 'deselect', revertHops: 2 });
     expect(tapSquare(mid, sq(1)).effect).toEqual({ kind: 'illegal', reason: 'not-a-target' });
-    expect(tapSquare(mid, null).state.prefix).toEqual([]);
+    expect(tapSquare(mid, null)).toEqual({ state: mid, effect: { kind: 'none' } });
   });
 
   it('does not allow switching pieces mid-sequence', () => {
@@ -159,7 +160,7 @@ describe('selection: captures and multi-jumps', () => {
   });
 
   it('finds the jumped square between two landings', () => {
-    expect(jumpedBetween(sq(10), sq(19))).toBe(sq(15));
-    expect(jumpedBetween(sq(11), sq(15))).toBeNull();
+    expect(jumpedSquareOrNull(sq(10), sq(19))).toBe(sq(15));
+    expect(jumpedSquareOrNull(sq(11), sq(15))).toBeNull();
   });
 });

@@ -18,10 +18,18 @@ export interface AiWorkerDeps {
   ttBits?: number;
 }
 
+export const NET_FETCH_TIMEOUT_MS = 30_000;
+
 async function fetchBytes(url: string): Promise<ArrayBuffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.arrayBuffer();
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(new Error(`Timed out fetching ${url}`)), NET_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: abort.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.arrayBuffer();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function errorMessage(err: unknown): string {
@@ -37,7 +45,8 @@ function checkLevel(level: LevelSpec): void {
     && Number.isFinite(level.maxDepth) && level.maxDepth >= 1
     && Number.isFinite(level.timeMs) && level.timeMs > 0
     && Number.isFinite(level.temperature) && level.temperature >= 0
-    && Number.isFinite(level.blunderRate) && level.blunderRate >= 0;
+    && Number.isFinite(level.blunderRate) && level.blunderRate >= 0
+    && (level.margin === undefined || (Number.isFinite(level.margin) && level.margin >= 0));
   if (!ok) throw new Error('Invalid level spec');
 }
 

@@ -535,13 +535,15 @@ function moveToFront(order: number[], idx: number): void {
   }
 }
 
-export function pickMove(r: SearchResult, level: Pick<LevelSpec, 'temperature' | 'blunderRate'>, rng: () => number): Move {
-  const candidates = r.rootScores;
-  if (!candidates || candidates.length < 2) return r.move;
-  if (level.blunderRate > 0 && rng() < level.blunderRate) return candidates[Math.floor(rng() * candidates.length)].move;
+export function pickMove(r: SearchResult, level: Pick<LevelSpec, 'temperature' | 'blunderRate' | 'margin'>, rng: () => number): Move {
+  const all = r.rootScores;
+  if (!all || all.length < 2) return r.move;
+  if (level.blunderRate > 0 && rng() < level.blunderRate) return all[Math.floor(rng() * all.length)].move;
   if (level.temperature <= 0) return r.move;
   const scale = EVAL_RANGE * level.temperature;
-  const top = Math.max(...candidates.map((c) => c.score));
+  const top = Math.max(...all.map((c) => c.score));
+  const margin = level.margin;
+  const candidates = margin === undefined ? all : all.filter((c) => c.score >= top - margin);
   const weights = candidates.map((c) => Math.exp((c.score - top) / scale));
   const total = weights.reduce((a, b) => a + b, 0);
   let x = rng() * total;

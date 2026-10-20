@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Side, Sq } from '../../src/engine/types.ts';
 import { applySlotProjection, homeFraming, newCamera, placeCamera, projectToCanvas, type Rect } from '../../src/scene/cameraRig.ts';
 import { KING_HEIGHT, PIECE_HEIGHT, squareAtWorld, squareCenter } from '../../src/scene/dims.ts';
-import { clientOfSquare, rayFromClient, squareAtClient, type SurfaceHeight } from '../../src/scene/picking.ts';
+import { clientOfSquare, nearestSquare, rayFromClient, squareAtClient, type SurfaceHeight } from '../../src/scene/picking.ts';
 
 const LEVELS = [KING_HEIGHT, PIECE_HEIGHT];
 
@@ -61,7 +61,7 @@ describe('picking', () => {
   });
 
   it('selects a standing piece by its top face, not the square behind it', () => {
-    const l = LAYOUTS[0];
+    const l = LAYOUTS[1];
     const camera = setup(0, l.canvas, l.slot);
     const onlyNine: SurfaceHeight = (sq) => (sq === 9 ? KING_HEIGHT : 0);
     const c = squareCenter(9);
@@ -77,6 +77,35 @@ describe('picking', () => {
       for (let col = 0; col < 8; col++) {
         const sq = squareAtWorld(col - 3.5, row - 3.5);
         expect(sq === null).toBe((row + col) % 2 === 0);
+      }
+    }
+  });
+
+  it('snaps a near miss to the closest candidate square, at the candidate surface height', () => {
+    const l = LAYOUTS[0];
+    const camera = setup(0, l.canvas, l.slot);
+    const target: Sq = 13;
+    const piece: Sq = 9;
+    const surface: SurfaceHeight = (sq) => (sq === piece ? PIECE_HEIGHT : 0);
+    const client = (x: number, y: number, z: number) => {
+      const p = projectToCanvas(camera, { x, y, z }, l.canvas.width, l.canvas.height);
+      return rayFromClient(camera, l.canvas, l.canvas.left + p.x, l.canvas.top + p.y);
+    };
+    const t = squareCenter(target);
+    expect(nearestSquare(client(t.x + 0.55, 0, t.z), [target, piece], surface, 0.6)).toBe(target);
+    expect(nearestSquare(client(t.x + 0.7, 0, t.z), [target, piece], surface, 0.6)).toBeNull();
+    const pc = squareCenter(piece);
+    expect(nearestSquare(client(pc.x, PIECE_HEIGHT, pc.z - 0.52), [target, piece], surface, 0.6)).toBe(piece);
+    expect(nearestSquare(client(t.x, 0, t.z + 0.5), [], surface, 0.6)).toBeNull();
+  });
+
+  it('a near-miss radius of 0.6 never reaches past a light square into another dark square', () => {
+    for (let sq: Sq = 0; sq < 32; sq++) {
+      const c = squareCenter(sq);
+      for (let k = 0; k < 64; k++) {
+        const a = (k / 64) * Math.PI * 2;
+        const hitSq = squareAtWorld(c.x + Math.cos(a) * 0.6, c.z + Math.sin(a) * 0.6);
+        expect(hitSq === null || hitSq === sq).toBe(true);
       }
     }
   });

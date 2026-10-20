@@ -30,8 +30,9 @@ class FakeWorker implements WorkerLike {
       if (!this.terminated) this.onmessage?.({ data: structuredClone(msg) } as MessageEvent<AiResponse>);
     }, 1),
     fetchBytes: async (url) => {
-      await tick(5);
-      const file = files[url];
+      if (url === '/nets/hang.bin') return new Promise<ArrayBuffer>(() => {});
+      await tick(url === '/nets/slow.bin' ? 80 : 5);
+      const file = url === '/nets/slow.bin' ? files['/nets/a.bin'] : files[url];
       if (!file) throw new Error(`HTTP 404 for ${url}`);
       return file.slice(0);
     },
@@ -54,7 +55,7 @@ class FakeWorker implements WorkerLike {
   }
 }
 
-function makeClient(opts: { silent?: boolean; watchdogMs?: number; startupGraceMs?: number } = {}) {
+function makeClient(opts: { silent?: boolean; watchdogMs?: number; startupGraceMs?: number; loadTimeoutMs?: number } = {}) {
   const workers: FakeWorker[] = [];
   const client = new AiClient({
     spawn: () => {
@@ -65,6 +66,7 @@ function makeClient(opts: { silent?: boolean; watchdogMs?: number; startupGraceM
     },
     watchdogMs: opts.watchdogMs !== undefined ? () => opts.watchdogMs! : undefined,
     startupGraceMs: opts.startupGraceMs,
+    loadTimeoutMs: opts.loadTimeoutMs,
   });
   clients.push(client);
   return { client, workers };
@@ -109,17 +111,44 @@ describe('AiClient', () => {
     await expect(client.think(start, 'b', level)).resolves.toHaveProperty('move');
   });
 
-  it('cancel rejects pending thinks, respawns and re-sends loaded nets', async () => {
+  it('cancel rejects pending thinks and respawns lazily, re-sending loaded nets', async () => {
     const { client, workers } = makeClient();
     await client.loadNet('a', '/nets/a.bin');
     const pending = client.think(start, 'a', { ...level, maxDepth: 30, timeMs: 2000 });
     client.cancel();
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
-    expect(workers.length).toBe(2);
+    expect(workers.length).toBe(1);
     expect(workers[0].terminated).toBe(true);
-    expect(workers[1].sent).toEqual([{ type: 'loadNet', netId: 'a', url: '/nets/a.bin' }]);
     const reply = await client.think(start, 'a', level);
     expect(reply.move).toMatch(/^\d+-\d+$/);
+    expect(workers.length).toBe(2);
+    expect(workers[1].sent[0]).toEqual({ type: 'loadNet', netId: 'a', url: '/nets/a.bin' });
+  });
+
+  it('does not spawn a worker when cancelling right before dispose', async () => {
+    const { client, workers } = makeClient();
+    await client.loadNet('a', '/nets/a.bin');
+    await client.think(start, 'heuristic', level);
+    client.cancel();
+    client.dispose();
+    expect(workers.length).toBe(1);
+  });
+
+  it('gives up waiting for a stalled net load without blocking heuristic thinks', async () => {
+    const { client, workers } = makeClient({ loadTimeoutMs: 30 });
+    await expect(client.loadNet('h', '/nets/hang.bin')).rejects.toThrow(/took too long to load/);
+    await expect(client.think(start, 'heuristic', level)).resolves.toHaveProperty('move');
+    expect(workers.length).toBe(1);
+    expect(workers[0].terminated).toBe(false);
+  });
+
+  it('keeps a timed-out load running so a later request finds it loaded', async () => {
+    const { client, workers } = makeClient({ loadTimeoutMs: 20 });
+    await expect(client.loadNet('s', '/nets/slow.bin')).rejects.toThrow(/too long/);
+    await tick(150);
+    await client.loadNet('s', '/nets/slow.bin');
+    expect(workers[0].sent.filter((m) => m.type === 'loadNet').length).toBe(1);
+    await expect(client.think(start, 's', level)).resolves.toHaveProperty('move');
   });
 
   it('keeps pending loads alive across a cancel', async () => {
@@ -154,22 +183,26 @@ describe('AiClient', () => {
     expect(workers.length).toBe(2);
   });
 
-  it('times out a request that never answers and restarts the worker', async () => {
-    const { client, workers } = makeClient({ silent: true, watchdogMs: 30, startupGraceMs: 0 });
+  it('times out a request that never answers and replaces the worker on the next call', async () => {
+    const opts = { silent: true, watchdogMs: 30, startupGraceMs: 0 };
+    const { client, workers } = makeClient(opts);
     await expect(client.think(start, 'heuristic', level)).rejects.toThrow(/too long/);
     expect(workers[0].terminated).toBe(true);
+    opts.silent = false;
+    await expect(client.think(start, 'heuristic', level)).resolves.toHaveProperty('move');
     expect(workers.length).toBe(2);
   });
 
   it('gives a fresh worker extra time to start before the watchdog applies', async () => {
-    const { client, workers } = makeClient({ silent: true, watchdogMs: 20, startupGraceMs: 150 });
+    const opts = { silent: true, watchdogMs: 20, startupGraceMs: 150 };
+    const { client, workers } = makeClient(opts);
     const pending = client.think(start, 'heuristic', level);
     let settled = false;
     pending.then(() => (settled = true), () => (settled = true));
     await tick(80);
     expect(settled).toBe(false);
     await expect(pending).rejects.toThrow(/too long/);
-    workers[1].silent = false;
+    opts.silent = false;
     await client.think(start, 'heuristic', level);
     workers[1].silent = true;
     const t0 = performance.now();

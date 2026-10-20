@@ -1,14 +1,14 @@
 import type { AppContext, GameScreenHandle, GameScreenOptions } from '../app/contracts.ts';
-import { saveFinished } from '../app/persist.ts';
+import { type FinishedGame, saveFinished } from '../app/persist.ts';
 import { onSettingsChange, updateSettings } from '../app/settings.ts';
 import { appState } from '../app/store.ts';
-import { haptic, setHapticsEnabled } from '../audio/haptics.ts';
-import { playSfx, setSoundEnabled } from '../audio/sfx.ts';
+import { haptic } from '../audio/haptics.ts';
+import { playSfx } from '../audio/sfx.ts';
 import { popcount } from '../engine/bitboard.ts';
 import { fromFen, sidePieces } from '../engine/position.ts';
 import type { Move, Position, Side } from '../engine/types.ts';
 import type { ConnStatus, GameResult, OfferKind } from '../net/protocol.ts';
-import { prefersReducedMotion } from '../ui/dom.ts';
+import { isTypingTarget, prefersReducedMotion } from '../ui/dom.ts';
 import { type Hud, type HudModel, createHud } from '../ui/hud.ts';
 import { type DialogAction, type DialogHandle, anyDialogOpen, confirmDialog, openDialog } from '../ui/modal.ts';
 import { SIDE_NAMES, createAnnouncer, describeMove, describeReason, resultHeadline } from './announcer.ts';
@@ -49,10 +49,6 @@ export function capturedCounts(startFen: string, pos: Position): Record<Side, nu
   return { 0: lost(1), 1: lost(0) };
 }
 
-function isTypingTarget(t: EventTarget | null): boolean {
-  return t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-}
-
 export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameScreenOptions, extras: GameScreenExtras = {}): GameScreenHandle {
   const announcer = createAnnouncer(document.getElementById('announcer-polite'), document.getElementById('announcer-assertive'));
   let disposed = false;
@@ -60,20 +56,25 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
   let resultDialog: DialogHandle | null = null;
   let offerDialog: { kind: OfferKind; handle: DialogHandle } | null = null;
   let lastResult: { result: GameResult; position: Position } | null = null;
+  let title = opts.title;
   const animate = () => !ctx.testMode && !prefersReducedMotion();
 
   const canRematch = () => !!extras.onRematch || (opts.mode === 'online' && !!driver.offer);
-  const savesFinishedGame = (mySides: readonly Side[]) => opts.mode !== 'live-match' && mySides.length > 0;
+  const finishedMode: FinishedGame['mode'] | null = opts.mode === 'local' || opts.mode === 'ai' || opts.mode === 'online' ? opts.mode : null;
+  const savesFinishedGame = (mySides: readonly Side[]) => finishedMode !== null && mySides.length > 0;
+  const pendingOffer = () => driver.snapshot().online?.outgoingOffer;
+  const sendOffer = (kind: OfferKind, sentMessage: string) => {
+    if (!driver.offer || pendingOffer()) return;
+    driver.offer(kind);
+    if (pendingOffer() === kind) ctx.toast(sentMessage);
+  };
   const reviewAction = (): DialogAction => opts.mode === 'online'
     ? { label: 'Review', keepOpen: true, onSelect: () => void confirmLeaveForReview() }
     : { label: 'Review', onSelect: () => ctx.navigate('#/review') };
   const rematch = () => {
     resultDialog?.close();
     if (extras.onRematch) extras.onRematch();
-    else if (driver.offer) {
-      driver.offer('rematch');
-      ctx.toast('Rematch offered');
-    }
+    else sendOffer('rematch', 'Rematch offered');
   };
 
   const hud: Hud = createHud({
@@ -86,12 +87,7 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
       toggleSound: () => updateSettings({ sound: !soundOn }),
       undo: opts.allowUndo && driver.undo ? () => driver.undo?.() : undefined,
       resign: () => void confirmResign(),
-      offerDraw: opts.mode === 'online' && driver.offer
-        ? () => {
-            driver.offer?.('draw');
-            ctx.toast('Draw offered');
-          }
-        : undefined,
+      offerDraw: opts.mode === 'online' && driver.offer ? () => sendOffer('draw', 'Draw offered') : undefined,
       rematch: canRematch() ? rematch : undefined,
       showResult: () => lastResult && showResult(lastResult.result, lastResult.position),
     },
@@ -126,8 +122,6 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
   const unsubSnapshot = extras.onSnapshot ? driver.subscribe(extras.onSnapshot) : () => undefined;
   const unsubSettings = onSettingsChange((s) => {
     soundOn = s.sound;
-    setSoundEnabled(s.sound);
-    setHapticsEnabled(s.haptics);
     render(controller.view());
   });
 
@@ -168,8 +162,8 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
     playSfx(result.winner === null || won ? 'win' : 'lose');
     const headline = resultHeadline(result, mine);
     announcer.assertive(`${headline}. ${describeReason(result, position)}.`);
-    if (savesFinishedGame(mine)) {
-      saveFinished({ mode: opts.mode, startFen: snap.startFen, moves: snap.moves, result, mySides: [...mine], orientation: mine.length === 1 ? mine[0] : opts.orientation, title: opts.title });
+    if (finishedMode && mine.length > 0) {
+      saveFinished({ mode: finishedMode, startFen: snap.startFen, moves: snap.moves, result, mySides: [...mine], orientation: mine.length === 1 ? mine[0] : opts.orientation, title });
     }
     showResult(result, position);
   }
@@ -195,12 +189,12 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
     }
     resultDialog = openDialog({
       className: 'result-dialog',
-      eyebrow: opts.title,
+      eyebrow: title,
       title: resultHeadline(result, snap.mySides),
       message: describeReason(result, position),
       body: stats,
       actions: [
-        ...(canRematch() ? [{ label: 'Play again', kind: 'primary' as const, onSelect: rematch }] : []),
+        ...(canRematch() && pendingOffer() !== 'rematch' ? [{ label: 'Play again', kind: 'primary' as const, onSelect: rematch }] : []),
         ...(savesFinishedGame(snap.mySides) ? [reviewAction()] : []),
         { label: 'Home', kind: 'ghost' as const, onSelect: () => ctx.navigate('#/') },
       ],
@@ -258,14 +252,27 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
     const over = view.status.over;
     const winner = view.status.over ? view.status.winner : null;
     const mine = snap.mySides;
+    const rematchPending = over && snap.online?.outgoingOffer === 'rematch';
     let status: string;
-    if (view.status.over) status = resultHeadline({ winner: view.status.winner, reason: view.status.reason }, mine);
-    else if (snap.thinking) status = `${names[turn]} is thinking…`;
-    else if (view.canMove) {
+    let chipStatus: string;
+    if (view.status.over) {
+      chipStatus = resultHeadline({ winner: view.status.winner, reason: view.status.reason }, mine);
+      status = rematchPending ? `Rematch offered — waiting for ${names[other(mine[0] ?? 0)]}` : chipStatus;
+      if (rematchPending) chipStatus = 'Rematch offered';
+    } else if (snap.thinking) {
+      status = `${names[turn]} is thinking…`;
+      chipStatus = 'Thinking';
+    } else if (view.canMove) {
       const base = mine.length === 1 ? 'Your move' : `${SIDE_NAMES[turn]} to move`;
       status = view.captureRequired ? `${base} · jump required` : base;
-    } else if (mine.length > 0 && !mine.includes(turn)) status = `Waiting for ${names[turn]}`;
-    else status = `${SIDE_NAMES[turn]} to move`;
+      chipStatus = view.captureRequired ? 'Jump required' : mine.length === 1 ? 'Your move' : 'To move';
+    } else if (mine.length > 0 && !mine.includes(turn)) {
+      status = `Waiting for ${names[turn]}`;
+      chipStatus = 'Their move';
+    } else {
+      status = `${SIDE_NAMES[turn]} to move`;
+      chipStatus = 'To move';
+    }
     return {
       orientation: view.orientation,
       turn,
@@ -275,6 +282,7 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
       over,
       winner,
       status,
+      chipStatus,
       statusTone: over ? 'over' : view.captureRequired ? 'alert' : 'neutral',
       moves: snap.moves,
       firstMover: fromFen(snap.startFen).turn,
@@ -282,14 +290,22 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
       canResign: !over && mine.length > 0,
       canOfferDraw: opts.mode === 'online' && !!driver.offer && !over && !snap.online?.outgoingOffer,
       canRematch: over && canRematch(),
+      rematchPending,
       soundOn,
       connection: snap.online ? { status: snap.online.status, label: CONNECTION_LABELS[snap.online.status] } : undefined,
     };
   }
 
+  let spokenStatus: string | null = null;
+
   function render(view: ControllerView) {
     if (disposed) return;
-    hud.update(hudModel(view));
+    const model = hudModel(view);
+    hud.update(model);
+    if (model.status !== spokenStatus) {
+      if (spokenStatus !== null && !model.over) announcer.polite(model.status);
+      spokenStatus = model.status;
+    }
     syncOfferDialog(view.snapshot);
   }
 
@@ -300,13 +316,19 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
     const active = document.activeElement;
     const onBoard = !active || active === document.body || active === hud.slot;
     switch (action.kind) {
-      case 'cursor':
+      case 'cursor': {
         if (!onBoard) return;
         controller.moveCursor(action.dir);
+        const text = controller.describeCursor();
+        if (text) announcer.polite(text);
         break;
+      }
       case 'activate':
         if (!onBoard) return;
-        controller.activateCursor();
+        void controller.activateCursor().then(() => {
+          const text = controller.describeSelection();
+          if (text && !disposed) announcer.polite(text);
+        });
         break;
       case 'cancel':
         controller.cancel();
@@ -329,8 +351,9 @@ export function mountGameScreen(ctx: AppContext, driver: GameDriver, opts: GameS
   render(controller.view());
 
   return {
-    setTitle(title, subtitle) {
-      hud.setTitle(title, subtitle);
+    setTitle(next, subtitle) {
+      title = next;
+      hud.setTitle(next, subtitle);
     },
     setExtraActions(actions) {
       hud.setExtraActions(actions);

@@ -3,15 +3,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Game, has, squares, toFen } from '../../src/engine/index.ts';
 import type { GenFile } from '../../src/shared/formats.ts';
-import {
-  ReplayError,
-  advanceIds,
-  buildTimeline,
-  clampPly,
-  evalToWinProbability,
-  fullMoveLabel,
-  initialIds,
-} from '../../src/lab/replayTimeline.ts';
+import { applyMoveIds, initialIds } from '../../src/game/pieceTracker.ts';
+import { fullMoveLabel } from '../../src/game/plies.ts';
+import { ReplayError, buildTimeline, clampPly, evalToWinProbability } from '../../src/lab/replayTimeline.ts';
 
 const FIXTURES = join(import.meta.dirname, '../fixtures/training');
 const genFiles: GenFile[] = readdirSync(join(FIXTURES, 'gens'))
@@ -137,11 +131,11 @@ describe('buildTimeline', () => {
     expect(clampPly(t, 1.7)).toBe(1);
   });
 
-  it('advanceIds does not mutate its input', () => {
+  it('applyMoveIds does not mutate its input', () => {
     const t = buildTimeline({ moves: ['11-15'] });
     const before = initialIds(t.positions[0]);
     const copy = [...before];
-    advanceIds(before, t.plies[0].move);
+    applyMoveIds(before, t.plies[0].move);
     expect([...before]).toEqual(copy);
   });
 });

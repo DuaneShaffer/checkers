@@ -316,12 +316,18 @@ export function isIrreversible(p: Position, m: Move): boolean {
   return m.captured !== 0 || ((p.kings >>> m.from) & 1) === 0;
 }
 
-export function jumpedSquare(a: Sq, b: Sq): Sq {
+export function jumpedSquareOrNull(a: Sq, b: Sq): Sq | null {
   for (let dir = 0; dir < 4; dir++) {
     const mid = NEXT[dir * 32 + a];
     if (mid >= 0 && NEXT[dir * 32 + mid] === b) return mid;
   }
-  throw new Error(`Squares ${a + 1} and ${b + 1} are not a jump apart`);
+  return null;
+}
+
+export function jumpedSquare(a: Sq, b: Sq): Sq {
+  const mid = jumpedSquareOrNull(a, b);
+  if (mid === null) throw new Error(`Squares ${a + 1} and ${b + 1} are not a jump apart`);
+  return mid;
 }
 
 export function capturedSquares(m: Move): Sq[] {

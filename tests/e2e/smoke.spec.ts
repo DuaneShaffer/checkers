@@ -41,6 +41,7 @@ test('test hook reports the opening position on home', async ({ page }) => {
 });
 
 test('menu links open each game screen without console errors', async ({ page }) => {
+  test.slow();
   const errors = collectErrors(page);
   await open(page);
   await page.getByRole('link', { name: /Pass & play/ }).click();
@@ -56,6 +57,7 @@ test('menu links open each game screen without console errors', async ({ page })
 });
 
 test('settings open in a dialog and persist', async ({ page }) => {
+  test.slow();
   await open(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings' });

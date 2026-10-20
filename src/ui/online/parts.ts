@@ -1,4 +1,3 @@
-import type { Side } from '../../engine/types.ts';
 import { canShare, copyText, qrSvg, shareLink } from '../../net/invite.ts';
 import type { AcceptResult } from '../../net/rooms.ts';
 import { cleanName } from '../../net/wire.ts';
@@ -8,6 +7,7 @@ import type { Child } from '../dom.ts';
 export const COPY = {
   timeout: 'Couldn’t connect directly — some networks (cellular / strict Wi-Fi) block peer-to-peer; try both on Wi-Fi.',
   keepOpen: 'Keep this tab open — the invite only works while this page stays open.',
+  keepGameOpen: 'Keep this game open — the link only works while this page stays open. You can close this window; Resume link brings it back.',
   badLink: 'That link looks incomplete or damaged. Ask your friend to send it again.',
   roomFull: 'This game already has two players.',
   protoMismatch: 'You and your friend are on different versions of the game — both of you refresh the page.',
@@ -16,7 +16,6 @@ export const COPY = {
   unsupported: 'This browser can’t make direct connections (WebRTC is unavailable). Try a current Chrome, Firefox, Safari or Edge.',
 };
 
-export const SIDE_LABEL: Record<Side, string> = { 0: 'Crimson', 1: 'Ivory' };
 
 export const ACCEPT_MESSAGES: Record<Exclude<AcceptResult, 'ok' | 'duplicate'>, string> = {
   'bad-link': 'That doesn’t look like a complete reply link. Ask your friend to send it again.',
@@ -72,7 +71,7 @@ export function linkButton(label: string, href: string, kind: 'primary' | 'ghost
 }
 
 export function spinner(label: string): HTMLElement {
-  return h('div', { class: 'ol-progress', role: 'status' }, h('span', { class: 'ol-spinner', 'aria-hidden': 'true' }), h('span', {}, label));
+  return h('div', { class: 'ol-progress', role: 'status' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), h('span', {}, label));
 }
 
 export interface StatusLine {

@@ -58,7 +58,6 @@ export function traySlot(owner: Side, slot: number, layout: TrayLayout): Vec3Lik
   return { x, y: TRAY_FLOOR, z };
 }
 
-/** Points whose projection must stay inside the board slot. */
 export function framingPoints(layout: TrayLayout): Vec3Like[] {
   const pts: Vec3Like[] = [];
   const corners = (hx: number, hz: number, ys: number[]) => {

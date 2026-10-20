@@ -3,12 +3,12 @@ import type { Sq } from '../engine/types.ts';
 import { squareAtWorld, squareCenter } from './dims.ts';
 import { projectToCanvas, type Rect } from './cameraRig.ts';
 
-/** Height of the top of whatever stands on `sq` (0 when the square is empty). */
 export type SurfaceHeight = (sq: Sq) => number;
 
 const ndc = new Vector2();
 const origin = new Vector3();
 const hit = new Vector3();
+const near = new Vector3();
 
 export function rayFromClient(camera: PerspectiveCamera, canvas: Rect, clientX: number, clientY: number, out = new Ray()): Ray {
   ndc.set(((clientX - canvas.left) / canvas.width) * 2 - 1, -((clientY - canvas.top) / canvas.height) * 2 + 1);
@@ -56,4 +56,20 @@ export function clientOfSquare(camera: PerspectiveCamera, canvas: Rect, sq: Sq, 
   const c = squareCenter(sq);
   const p = projectToCanvas(camera, { x: c.x, y: surface(sq), z: c.z }, canvas.width, canvas.height);
   return { x: canvas.left + p.x, y: canvas.top + p.y };
+}
+
+export function nearestSquare(ray: Ray, candidates: Iterable<Sq>, surface: SurfaceHeight, radius: number): Sq | null {
+  let best: Sq | null = null;
+  let bestDist = radius;
+  for (const sq of candidates) {
+    const p = intersectHorizontal(ray, surface(sq), near);
+    if (!p) continue;
+    const c = squareCenter(sq);
+    const d = Math.hypot(p.x - c.x, p.z - c.z);
+    if (d <= bestDist) {
+      bestDist = d;
+      best = sq;
+    }
+  }
+  return best;
 }

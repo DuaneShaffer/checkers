@@ -1,14 +1,15 @@
-import { rowColToSq, sqToRowCol } from '../engine/bitboard.ts';
+import { capturedSquares, jumpedSquareOrNull } from '../engine/movegen.ts';
 import { initialPosition } from '../engine/position.ts';
+import { initialIds } from '../game/pieceTracker.ts';
 import type { Move, Position, Side, Sq } from '../engine/types.ts';
 import { createBoardModel, type BoardModel } from './boardModel.ts';
 import { KING_HEIGHT, LIFT_HEIGHT, PIECE_HEIGHT, squareCenter } from './dims.ts';
 import { createLighting, type Lighting } from './environment.ts';
 import { JUMP_HOP, QUIET_HOP, crownDrop, flyToTray, hop, popIn, squash, type AnimContext, type Motion } from './moveAnimator.ts';
 import { HighlightLayer } from './highlights.ts';
-import { clientOfSquare as projectSquare, squareAtClient as pickAt } from './picking.ts';
+import { nearestSquare, clientOfSquare as projectSquare, rayFromClient, squareAtClient as pickAt } from './picking.ts';
 import { createPieceModel, type PieceModel } from './pieceModel.ts';
-import { Pieces, sequentialIds, type PieceEntity } from './pieces.ts';
+import { Pieces, type PieceEntity } from './pieces.ts';
 import {
   TIERS,
   initialTier,
@@ -25,6 +26,7 @@ import type { BoardView, BoardViewOptions, CreateBoardView, Highlights, PieceIds
 
 const TAP_SLOP_PX = 9;
 const TAP_MAX_MS = 650;
+const TAP_SNAP_RADIUS = 0.6;
 const PICK_LEVELS = [KING_HEIGHT, PIECE_HEIGHT];
 const REDUCED_TIME_SCALE = 0.45;
 const SYNC_MS = 220;
@@ -57,19 +59,7 @@ interface TrackedPointer {
   y: number;
   t: number;
   tap: boolean;
-}
-
-/** Midpoints of each hop, in hop order. */
-function jumpedSquares(path: readonly Sq[]): Sq[] {
-  const out: Sq[] = [];
-  for (let i = 0; i + 1 < path.length; i++) {
-    const a = sqToRowCol(path[i]);
-    const b = sqToRowCol(path[i + 1]);
-    if (Math.abs(a.row - b.row) !== 2) continue;
-    const mid = rowColToSq((a.row + b.row) / 2, (a.col + b.col) / 2);
-    if (mid !== null) out.push(mid);
-  }
-  return out;
+  coarse: boolean;
 }
 
 function squarePose(sq: Sq) {
@@ -105,9 +95,9 @@ class BoardViewImpl implements BoardViewExt {
     this.host = host;
     const testMode = opts.testMode ?? false;
     this.pref = opts.quality ?? 'auto';
-    this.tier = testMode ? 'high' : initialTier(this.pref, readDeviceHints(), readStoredTier());
+    this.tier = testMode ? 'low' : initialTier(this.pref, readDeviceHints(), readStoredTier());
     const spec = TIERS[this.tier];
-    const antialias = this.tier === 'high' || window.devicePixelRatio < 2;
+    const antialias = !testMode && (this.tier === 'high' || window.devicePixelRatio < 2);
 
     this.stage = new Stage(
       host,
@@ -155,10 +145,10 @@ class BoardViewImpl implements BoardViewExt {
 
     if (testMode) this.stage.tweens.instant = true;
     this.installPointerHandling();
-    this.setPosition(initialPosition());
+    const start = initialPosition();
+    this.setPosition(start, initialIds(start));
   }
 
-  /** Compiles every material variant up front (off the main thread where supported), then draws the first frame. */
   async warmUp(): Promise<void> {
     const { renderer, scene, camera } = this.stage;
     const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
@@ -174,10 +164,10 @@ class BoardViewImpl implements BoardViewExt {
   }
 
 
-  setPosition(pos: Position, ids?: PieceIds): void {
+  setPosition(pos: Position, ids: PieceIds): void {
     this.interrupt();
     this.clearPreview();
-    this.pieces.reconcile(pos, ids ?? sequentialIds(pos));
+    this.pieces.reconcile(pos, ids);
     this.pieces.snapAll();
     this.applyPendingTint();
     this.applyLift(false);
@@ -223,7 +213,7 @@ class BoardViewImpl implements BoardViewExt {
     if (!continuing) this.clearPreview();
     this.preview = null;
 
-    const captured = jumpedSquares(move.path);
+    const captured = capturedSquares(move);
     const mover = this.pieces.entityAt(move.from);
     const wasKing = mover?.king ?? false;
     const { taken } = this.pieces.applyMove(move.from, move.to, captured, move.promotes);
@@ -256,7 +246,8 @@ class BoardViewImpl implements BoardViewExt {
       await hop(ctx, mover, from, to, spec.height, spec.ms);
       if (run.cancelled) return;
       if (jump) {
-        const victim = takenBySquare.get(jumpedSquares([move.path[i], move.path[i + 1]])[0]);
+        const mid = jumpedSquareOrNull(move.path[i], move.path[i + 1]);
+        const victim = mid === null ? undefined : takenBySquare.get(mid);
         if (victim) this.pieces.setPending(victim, true);
       }
       from = to;
@@ -401,23 +392,31 @@ class BoardViewImpl implements BoardViewExt {
     return () => this.tapListeners.delete(fn);
   }
 
-  private isActionable(sq: Sq | null): boolean {
-    if (sq === null) return false;
+  private actionableSquares(): Set<Sq> {
     const h = this.highlights;
-    return (
-      h.selected === sq ||
-      (h.movable ?? []).includes(sq) ||
-      (h.targets ?? []).includes(sq) ||
-      (h.captureTargets ?? []).includes(sq)
-    );
+    const out = new Set<Sq>([...(h.movable ?? []), ...(h.targets ?? []), ...(h.captureTargets ?? [])]);
+    if (h.selected !== null && h.selected !== undefined) out.add(h.selected);
+    return out;
+  }
+
+  private isActionable(sq: Sq | null): boolean {
+    return sq !== null && this.actionableSquares().has(sq);
+  }
+
+  private tapTarget(x: number, y: number, coarse: boolean): Sq | null {
+    const sq = this.squareAtClient(x, y);
+    if (sq !== null || !coarse) return sq;
+    const ray = rayFromClient(this.stage.camera, this.stage.canvasClientRect, x, y);
+    return nearestSquare(ray, this.actionableSquares(), (s) => this.pieces.surfaceAt(s), TAP_SNAP_RADIUS);
   }
 
   private installPointerHandling(): void {
     const canvas = this.stage.canvas;
     const onDown = (ev: PointerEvent) => {
       if (ev.target !== canvas) return;
-      const tap = ev.pointerType !== 'mouse' || ev.button === 0;
-      this.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, t: performance.now(), tap });
+      const coarse = ev.pointerType !== 'mouse';
+      const tap = coarse || ev.button === 0;
+      this.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, t: performance.now(), tap, coarse });
       if (this.pointers.size > 1) for (const p of this.pointers.values()) p.tap = false;
       if (ev.pointerType === 'mouse' && ev.button === 0 && this.isActionable(this.squareAtClient(ev.clientX, ev.clientY))) {
         ev.stopPropagation();
@@ -435,7 +434,7 @@ class BoardViewImpl implements BoardViewExt {
       if (!p) return;
       this.pointers.delete(ev.pointerId);
       if (!p.tap || performance.now() - p.t > TAP_MAX_MS || this.pointers.size > 0) return;
-      const sq = this.squareAtClient(p.x, p.y);
+      const sq = this.tapTarget(p.x, p.y, p.coarse);
       for (const fn of [...this.tapListeners]) fn(sq);
     };
     const onCancel = (ev: PointerEvent) => {
@@ -487,7 +486,6 @@ class BoardViewImpl implements BoardViewExt {
   }
 
 
-  /** Stops the running piece animation; by default snaps every piece to its model pose. */
   private interrupt(snap = true): Run {
     this.run.cancelled = true;
     this.stage.tweens.cancel(this.run);

@@ -170,7 +170,7 @@ export const friendScreen: ScreenFactory = (ctx) => {
         stashLiveLink(record.code, inv.handOff());
         ctx.navigate(`#/play/${record.code}`);
       } else if (s === 'timeout' || s === 'closed') {
-        status.set(s === 'timeout' ? 'Still trying…' : 'Connection closed', 'error');
+        status.set(s === 'timeout' ? 'Still trying…' : 'Couldn’t connect', 'error');
         failure.replaceChildren(
           callout('error', COPY.timeout),
           actions(button('Create a new invite', showSetup, 'primary'), linkButton('Home', '#/', 'ghost')),
@@ -226,6 +226,7 @@ export const joinScreen: ScreenFactory = async (ctx, params) => {
 
   const existing = loadRoom(offer.code);
   if (existing && existing.role === offer.role) showOwnLink(existing);
+  else if (existing?.game && !offer.gameId) showUsedInvite(existing);
   else if (existing) showConfirm('resume', existing);
   else if (offer.role === 'guest' || offer.gameId) showNotHere();
   else showConfirm('fresh', null);
@@ -243,6 +244,20 @@ export const joinScreen: ScreenFactory = async (ctx, params) => {
         record.game ? linkButton('Back to the game', `#/play/${record.code}`, 'primary') : null,
         linkButton('Home', '#/', record.game ? 'ghost' : 'primary'),
       ),
+    );
+  }
+
+  function showUsedInvite(record: RoomRecord) {
+    shell.setContent(
+      heading('Invitation', 'This invite was already used', `You’re already in this game with ${peerLabel(record)}. If you lost the connection, open the game and tap Resume link to send a new link.`),
+      actions(linkButton('Back to the game', `#/play/${record.code}`, 'primary'), linkButton('Home', '#/', 'ghost')),
+    );
+  }
+
+  function showElsewhere(retry: () => void) {
+    shell.setContent(
+      heading('Reconnect', 'Your game is open in another tab', 'If you’re still playing there, switch back to that tab. Reconnect here only if that tab lost the connection — the other tab will stop playing.'),
+      actions(button('Reconnect here', retry, 'primary', { 'data-action': 'take-over' }), linkButton('Not now', '#/', 'ghost')),
     );
   }
 
@@ -270,12 +285,16 @@ export const joinScreen: ScreenFactory = async (ctx, params) => {
     );
   }
 
-  async function join(kind: JoinKind, existing: RoomRecord | null, name: string | undefined) {
+  async function join(kind: JoinKind, existing: RoomRecord | null, name: string | undefined, takeover = false) {
     shell.setContent(heading('Invitation', kind === 'fresh' ? 'Joining…' : 'Reconnecting…'), spinner('Preparing your reply (a few seconds)…'));
-    lock = await acquireRoomLock(offer.code, true);
+    lock = await acquireRoomLock(offer.code, takeover);
     if (disposed) return;
+    if (!lock && !takeover) {
+      showElsewhere(() => void join(kind, existing, name, true));
+      return;
+    }
     if (!lock) {
-      shell.setContent(heading('Invitation', 'Game open elsewhere'), callout('error', COPY.otherTab), actions(button('Try again', () => void join(kind, existing, name), 'primary')));
+      shell.setContent(heading('Invitation', 'Game open elsewhere'), callout('error', COPY.otherTab), actions(button('Try again', () => void join(kind, existing, name, true), 'primary')));
       return;
     }
     let record = existing ?? loadRoom(offer.code);
@@ -340,12 +359,20 @@ export const joinScreen: ScreenFactory = async (ctx, params) => {
       if (disposed) return;
       if (s === 'open') go();
       else if (s === 'closed') {
-        status.set('Connection closed', 'error');
-        hint.replaceChildren(callout('error', COPY.timeout), actions(linkButton('Home', '#/', 'ghost')));
+        clearTimeout(hintTimer);
+        status.set('Couldn’t connect', 'error');
+        hint.replaceChildren(callout('error', link.closeReason === 'failed' ? failedReplyCopy(link.reachedPeer, who) : COPY.timeout), actions(linkButton('Home', '#/', 'ghost')));
       }
     });
   }
 };
+
+function failedReplyCopy(reachedPeer: boolean, who: string): string {
+  const owner = who === 'your friend' ? 'your friend’s' : `${who}’s`;
+  return reachedPeer
+    ? `This invite may already be in use. Ask ${who} for a new invite link.`
+    : `Couldn’t reach ${owner} invite — it may have been closed or already used. Ask for a new invite. (Some networks also block direct connections; if it keeps failing, try both on Wi-Fi.)`;
+}
 
 export const answerScreen: ScreenFactory = async (ctx, params) => {
   const shell = screenShell(ctx.root, 'ol-answer');
@@ -422,6 +449,13 @@ export const answerScreen: ScreenFactory = async (ctx, params) => {
       heading('Reply', 'Your game tab couldn’t use this reply'),
       callout('error', 'That invite already connected or expired. If you’re not playing yet, create a new invite.'),
       actions(linkButton('Play a friend', '#/friend', 'primary'), linkButton('Home', '#/', 'ghost')),
+    );
+  } else if (record?.game && record.role !== payload.role) {
+    shell.setContent(
+      heading('Reply', 'No invite is waiting for this reply', `It may answer an invite that was already used or closed. If you’re still playing, go back to the game. If you lost the connection, tap Resume link there and send ${record.peerName ?? 'your friend'} the new link.`),
+      linkPanel({ url: replyUrl(blob), kind: 'reply', toast: ctx.toast, shareTitle: 'Checkers reply', shareText: 'Checkers reply link' }),
+      callout('info', 'If your game’s Resume link window is still waiting, paste this reply there.'),
+      actions(linkButton('Back to the game', `#/play/${code}`, 'primary'), linkButton('Home', '#/', 'ghost')),
     );
   } else {
     shell.setContent(

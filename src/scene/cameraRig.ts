@@ -5,6 +5,7 @@ import { framingPoints, type TrayLayout, type Vec3Like } from './dims.ts';
 export const CAMERA_FOV = 25;
 export const FIT_PADDING = 0.035;
 const DEG = Math.PI / 180;
+export const MIN_POLAR = 12 * DEG;
 
 export interface Rect {
   left: number;
@@ -24,6 +25,10 @@ export interface Framing {
   layout: TrayLayout;
   /** NDC (slot-relative) of the framed bounding-box center, shifted onto the slot center. */
   center: { x: number; y: number };
+}
+
+interface Fit extends Omit<Framing, 'layout'> {
+  fill: { x: number; y: number };
 }
 
 /** Orbit azimuth (three.js Spherical theta) that puts `side`'s home rows nearest the camera. */
@@ -82,17 +87,14 @@ function requiredScale(b: NdcBounds, padding: number): number {
   return Math.max(b.maxX - b.minX, b.maxY - b.minY) / 2 / (1 - padding);
 }
 
-/**
- * Finds the camera distance at which `points` exactly fill a slot of the given aspect
- * (with padding), once the projected bounding box is re-centered on the slot.
- */
+/** Distance is fitted after re-centering the projected bounding box on the slot. */
 export function fitToSlot(
   aspect: number,
   polar: number,
   azimuth: number,
   points: readonly Vec3Like[],
   padding = FIT_PADDING,
-): Omit<Framing, 'layout'> {
+): Fit {
   const camera = new PerspectiveCamera(CAMERA_FOV, aspect, 0.1, 1000);
   let lo = 2;
   let hi = 400;
@@ -105,18 +107,45 @@ export function fitToSlot(
   const pose = { polar, azimuth, distance: hi };
   placeCamera(camera, pose);
   const b = ndcBounds(camera, points);
-  return { pose, center: { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 } };
+  return {
+    pose,
+    center: { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 },
+    fill: { x: (b.maxX - b.minX) / 2, y: (b.maxY - b.minY) / 2 },
+  };
 }
 
-/** Frames the board for `side`, putting the capture trays wherever they cost the board the least size. */
-export function homeFraming(slotW: number, slotH: number, side: Side): Framing {
-  const aspect = slotW / slotH;
-  const polar = polarForAspect(aspect);
+function bestLayout(aspect: number, polar: number, azimuth: number): Fit & { layout: TrayLayout } {
   const fits = (['ends', 'sides'] as const).map((layout) => ({
-    ...fitToSlot(aspect, polar, homeAzimuth(side), framingPoints(layout)),
+    ...fitToSlot(aspect, polar, azimuth, framingPoints(layout)),
     layout,
   }));
   return fits[0].pose.distance <= fits[1].pose.distance ? fits[0] : fits[1];
+}
+
+const hasVerticalSlack = (f: Fit) => f.fill.y < f.fill.x - 1e-3;
+
+export function homeFraming(slotW: number, slotH: number, side: Side): Framing {
+  const aspect = slotW / slotH;
+  const azimuth = homeAzimuth(side);
+  const natural = polarForAspect(aspect);
+  let best = bestLayout(aspect, natural, azimuth);
+  if (hasVerticalSlack(best) && natural > MIN_POLAR) {
+    const flattest = bestLayout(aspect, MIN_POLAR, azimuth);
+    if (hasVerticalSlack(flattest)) best = flattest;
+    else {
+      let lo = MIN_POLAR;
+      let hi = natural;
+      for (let i = 0; i < 16; i++) {
+        const mid = (lo + hi) / 2;
+        const f = bestLayout(aspect, mid, azimuth);
+        if (hasVerticalSlack(f)) {
+          hi = mid;
+          best = f;
+        } else lo = mid;
+      }
+    }
+  }
+  return { pose: best.pose, center: best.center, layout: best.layout };
 }
 
 /**

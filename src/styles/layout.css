@@ -80,10 +80,12 @@
 }
 
 .game-screen {
+  --board-aspect: 0.9;
+  --slot-w: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
   grid-template:
-    'a' auto
-    'board' minmax(0, 1fr)
-    'b' auto
+    'a' 1fr
+    'board' minmax(0, calc(var(--slot-w) / var(--board-aspect)))
+    'b' 1fr
     / minmax(0, 1fr);
 }
 
@@ -102,6 +104,16 @@
 
 .hud-b {
   grid-area: b;
+  align-content: space-between;
+}
+
+.hud-a > .player-chip {
+  order: 2;
+  margin-top: auto;
+}
+
+.hud-a > .ol-banner {
+  order: 1;
 }
 
 .moves-panel {
@@ -134,6 +146,12 @@
   .hud-b > :first-child {
     margin-top: auto;
   }
+
+  .hud-a > .player-chip,
+  .hud-a > .ol-banner {
+    order: 0;
+    margin-top: 0;
+  }
 }
 
 @media (min-width: 900px) and (min-aspect-ratio: 5/4) {
@@ -148,6 +166,12 @@
       calc(var(--safe-right) + 28px)
       calc(var(--safe-bottom) + 24px)
       calc(var(--safe-left) + 28px);
+  }
+
+  .hud-a > .player-chip,
+  .hud-a > .ol-banner {
+    order: 0;
+    margin-top: 0;
   }
 
   .moves-panel {

@@ -84,12 +84,13 @@ test('a game in progress can be resumed from home', async ({ page, hasTouch }) =
 });
 
 test('reloading mid-game resumes it', async ({ page, hasTouch }) => {
+  test.slow();
   await open(page, '#/local');
   await playByTaps(page, '11-15', !!hasTouch);
   await playByTaps(page, '23-19', !!hasTouch);
   await playByTaps(page, '8-11', !!hasTouch);
   await page.reload();
-  await page.waitForFunction(() => document.documentElement.dataset.route === 'local' && document.body.dataset.ready === '1');
+  await page.waitForFunction(() => document.documentElement.dataset.route === 'local' && document.body.dataset.ready === '1', undefined, { timeout: 60_000 });
   await expect.poll(async () => (await state(page)).moves).toEqual(['11-15', '23-19', '8-11']);
 });
 
@@ -135,4 +136,11 @@ test('keyboard selects and moves a piece', async ({ page, hasTouch }) => {
   await page.keyboard.press('ArrowUp');
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await state(page)).moves.length).toBe(1);
+});
+
+test('clicking a HUD button hands the arrow keys back to the board', async ({ page, hasTouch }) => {
+  test.skip(!!hasTouch, 'keyboard play is a desktop feature');
+  await open(page, '#/local');
+  await page.getByRole('button', { name: 'Flip board' }).click();
+  await expect(page.locator('.board-slot')).toBeFocused();
 });

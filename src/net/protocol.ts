@@ -1,12 +1,12 @@
-import type { EndReason, Side } from '../engine/types.ts';
+import type { GameResult, Side } from '../engine/types.ts';
+
+export type { GameResult };
 
 export const PROTO = 1;
 export const MAX_MESSAGE_BYTES = 64 * 1024;
 
 export type Role = 'host' | 'guest';
 export type OfferKind = 'draw' | 'rematch';
-
-export interface GameResult { winner: Side | null; reason: EndReason }
 
 export interface OnlineGame {
   id: string;

@@ -307,6 +307,19 @@ describe('root scores and pickMove', () => {
     expect(blunders.size).toBe(7);
   });
 
+  it('only samples moves within the margin of the best score', () => {
+    const searcher = new Searcher(heuristic);
+    const rng = mulberry32(5);
+    for (const p of randomPositions(73, 20)) {
+      const r = searcher.search(p, { maxDepth: 3, rootScores: true });
+      const top = Math.max(...r.rootScores!.map((x) => x.score));
+      const allowed = new Set(r.rootScores!.filter((x) => x.score >= top - 10).map((x) => moveToString(x.move)));
+      for (let i = 0; i < 50; i++) {
+        expect(allowed.has(moveToString(pickMove(r, { temperature: 1, blunderRate: 0, margin: 10 }, rng)))).toBe(true);
+      }
+    }
+  });
+
   it('cannot randomise without root scores', () => {
     const r = new Searcher(heuristic).search(initialPosition(), { maxDepth: 2 });
     expect(r.rootScores).toBeUndefined();

@@ -450,6 +450,22 @@ dialog.dialog[open] {
   transform: translateY(6px);
 }
 
+.spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--brass-hi) 25%, transparent);
+  border-top-color: var(--brass-hi);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;
@@ -464,33 +480,38 @@ dialog.dialog[open] {
   border-radius: 6px;
 }
 
+.mini-board rect {
+  shape-rendering: crispEdges;
+}
+
 .mb-light {
-  fill: #d6b98c;
+  fill: var(--mb-light);
 }
 
 .mb-dark {
-  fill: #4a2c1a;
+  fill: var(--mb-dark);
 }
 
 .mb-last {
-  fill: #6b4423;
+  fill: var(--mb-last);
 }
 
 .mb-piece {
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 0.05;
+  stroke-width: 0.06;
 }
 
 .mb-crimson {
-  fill: #a3161f;
+  fill: var(--piece-crimson);
+  stroke: var(--piece-crimson-edge);
 }
 
 .mb-ivory {
-  fill: #ece2cb;
+  fill: var(--piece-ivory);
+  stroke: var(--piece-ivory-edge);
 }
 
 .mb-crown {
-  fill: #e6c787;
+  fill: var(--brass-hi);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -33,13 +33,6 @@ export interface Pose extends Vec3Like {
 const PIECES_PER_SIDE = 12;
 const CROWN_Y = PIECE_HEIGHT - PIECE_TOP_INSET + 0.0075;
 
-export function sequentialIds(pos: Position): PieceIds {
-  const ids = new Int16Array(32).fill(-1);
-  let next = 0;
-  for (let sq = 0; sq < 32; sq++) if (has((pos.black | pos.white) >>> 0, sq)) ids[sq] = next++;
-  return ids;
-}
-
 interface Target {
   sq: Sq;
   side: Side;
@@ -145,7 +138,6 @@ export class Pieces {
     for (const e of this.entities) this.snap(e);
   }
 
-  /** Temporarily shows every mesh and material variant so their shaders can be compiled up front. */
   async withAllVariantsShown(fn: () => Promise<unknown>): Promise<void> {
     const sample = this.entities[0];
     const tops = this.entities.map((e) => e.top.visible);
@@ -165,7 +157,6 @@ export class Pieces {
     this.applyMaterial(e);
   }
 
-  /** Model-only: moves the piece and sends captures to the mover's tray. Visuals are left to the animator. */
   applyMove(from: Sq, to: Sq, captured: readonly Sq[], promotes: boolean): { mover: PieceEntity | undefined; taken: PieceEntity[] } {
     const mover = this.entityAt(from);
     const taken = captured.map((sq) => this.entityAt(sq)).filter((e): e is PieceEntity => e !== undefined);
@@ -177,10 +168,6 @@ export class Pieces {
     return { mover, taken };
   }
 
-  /**
-   * Model-only reconciliation with a new position. Entities keep their meshes; returns what changed
-   * so the caller can animate from each entity's previous pose.
-   */
   reconcile(pos: Position, ids: PieceIds): SyncChange[] {
     const before = new Map(this.entities.map((e) => [e, { pose: this.currentPose(e), onBoard: e.sq !== null, king: e.king, sq: e.sq }]));
     const targets = targetsOf(pos, ids);

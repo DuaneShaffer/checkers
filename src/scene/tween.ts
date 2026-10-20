@@ -34,9 +34,7 @@ interface Active {
 
 export class Tweens {
   instant = false;
-  /** Multiplies every duration; prefers-reduced-motion sets it. Per-animation speed is AnimContext.speed. */
   timeScale = 1;
-  /** Called whenever a tween is queued, so an idle render loop can restart. */
   onWake: () => void = () => {};
   private active: Active[] = [];
 
@@ -66,7 +64,6 @@ export class Tweens {
     return this.add(ms, () => {}, { ease: linear, run });
   }
 
-  /** Advances all tweens; returns true while any remain. */
   tick(dtMs: number): boolean {
     if (this.active.length === 0) return false;
     const done: Active[] = [];
@@ -89,7 +86,6 @@ export class Tweens {
     return this.active.length > 0;
   }
 
-  /** Drops every tween belonging to `run` (or all tweens) without applying final values. */
   cancel(run?: Run): void {
     const dropped = run ? this.active.filter((a) => a.run === run) : this.active;
     this.active = run ? this.active.filter((a) => a.run !== run) : [];

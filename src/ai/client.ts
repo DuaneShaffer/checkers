@@ -1,5 +1,6 @@
 import type { LevelSpec } from './levels.ts';
 import type { AiClientApi, AiMove, AiRequest, AiResponse, GameRef, NetId } from './protocol.ts';
+import { patientTimeout } from '../shared/patientTimeout.ts';
 
 export interface WorkerLike {
   postMessage(msg: AiRequest): void;
@@ -14,6 +15,7 @@ export interface AiClientOptions {
   spawn?: WorkerFactory;
   watchdogMs?: (level: LevelSpec) => number;
   startupGraceMs?: number;
+  loadTimeoutMs?: number;
 }
 
 interface Waiter<T> {
@@ -36,6 +38,7 @@ export function spawnAiWorker(): WorkerLike {
 }
 
 export const STARTUP_GRACE_MS = 30_000;
+export const LOAD_TIMEOUT_MS = 10_000;
 
 export function defaultWatchdogMs(level: LevelSpec): number {
   return level.timeMs * 3 + 10_000;
@@ -63,6 +66,7 @@ export class AiClient implements AiClientApi {
   private readonly spawn: WorkerFactory;
   private readonly watchdogMs: (level: LevelSpec) => number;
   private readonly startupGraceMs: number;
+  private readonly loadTimeoutMs: number;
   private worker: WorkerLike | null = null;
   private workerResponded = false;
   private nextReqId = 1;
@@ -75,6 +79,7 @@ export class AiClient implements AiClientApi {
     this.spawn = opts.spawn ?? spawnAiWorker;
     this.watchdogMs = opts.watchdogMs ?? defaultWatchdogMs;
     this.startupGraceMs = opts.startupGraceMs ?? STARTUP_GRACE_MS;
+    this.loadTimeoutMs = opts.loadTimeoutMs ?? LOAD_TIMEOUT_MS;
   }
 
   loadNet(netId: string, url: string): Promise<void> {
@@ -82,7 +87,17 @@ export class AiClient implements AiClientApi {
     const abs = absoluteUrl(url);
     if (this.loaded.get(netId) === abs && !this.loads.some((l) => l.netId === netId)) return Promise.resolve();
     return new Promise<void>((resolve, reject) => {
-      const waiter = { resolve, reject };
+      const cancelTimer = patientTimeout(this.loadTimeoutMs, () => this.abandonLoad(waiter, netId));
+      const waiter: Waiter<void> = {
+        resolve: () => {
+          cancelTimer();
+          resolve();
+        },
+        reject: (err) => {
+          cancelTimer();
+          reject(err);
+        },
+      };
       const inFlight = this.loads.find((l) => l.netId === netId && l.url === abs);
       if (inFlight) {
         inFlight.waiters.push(waiter);
@@ -91,7 +106,7 @@ export class AiClient implements AiClientApi {
       try {
         this.sendLoad({ netId, url: abs, waiters: [waiter] });
       } catch (err) {
-        reject(asError(err));
+        waiter.reject(asError(err));
       }
     });
   }
@@ -192,6 +207,16 @@ export class AiClient implements AiClientApi {
     return at < 0 ? undefined : this.loads.splice(at, 1)[0];
   }
 
+  private abandonLoad(waiter: Waiter<void>, netId: string): void {
+    for (const load of this.loads) {
+      const at = load.waiters.indexOf(waiter);
+      if (at < 0) continue;
+      load.waiters.splice(at, 1);
+      waiter.reject(new Error(`Network ${netId} took too long to load`));
+      return;
+    }
+  }
+
   private settleThink(reqId: number): PendingThink | undefined {
     const pending = this.thinks.get(reqId);
     if (!pending) return undefined;
@@ -213,6 +238,7 @@ export class AiClient implements AiClientApi {
   private restart(err: Error): void {
     this.killWorker();
     this.rejectThinks(err);
+    if (!this.loads.some((l) => l.waiters.length > 0)) return;
     try {
       this.ensureWorker();
     } catch (spawnErr) {

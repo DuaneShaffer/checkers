@@ -36,7 +36,7 @@ function material(map: Texture, color: string, opacity: number, blending: Blendi
   });
 }
 
-export type HighlightKind = 'lastMove' | 'movable' | 'selected' | 'target' | 'capture' | 'cursor';
+export type HighlightKind = 'lastMove' | 'lastMoveEdge' | 'movable' | 'selected' | 'target' | 'capture' | 'cursor';
 
 export class HighlightLayer {
   readonly root = new Group();
@@ -49,10 +49,11 @@ export class HighlightLayer {
     this.geometry.rotateX(-Math.PI / 2);
     const kind = (m: MeshBasicMaterial, size: number, y: number): Kind => ({ material: m, size, y, pool: [] });
     this.kinds = {
-      lastMove: kind(material(tex.square, '#f0b85c', 0.26), 0.98, 0.002),
+      lastMove: kind(material(tex.square, '#f0b85c', 0.42), 0.98, 0.002),
+      lastMoveEdge: kind(material(tex.outline, '#e3ad52', 0.8), 0.96, 0.0025),
       movable: kind(material(tex.glowRing, '#f2c062', 0.95, AdditiveBlending), 1.12, 0.003),
       selected: kind(material(tex.glowRing, '#fff0c4', 1, AdditiveBlending), 1.2, 0.0035),
-      target: kind(material(tex.dot, '#f3cf86', 1), 0.48, 0.004),
+      target: kind(material(tex.dot, '#f6d58f', 1), 0.64, 0.004),
       capture: kind(material(tex.ring, '#ff5b3d', 0.95), 0.98, 0.0045),
       cursor: kind(material(tex.outline, '#ffffff', 0.92), 1.0, 0.005),
     };
@@ -60,7 +61,9 @@ export class HighlightLayer {
 
   set(h: Highlights): void {
     const selected = h.selected ?? null;
-    this.place('lastMove', h.lastMove ? [h.lastMove[0], h.lastMove[1]] : []);
+    const lastMove = h.lastMove ? [h.lastMove[0], h.lastMove[1]] : [];
+    this.place('lastMove', lastMove);
+    this.place('lastMoveEdge', lastMove);
     this.place('movable', (h.movable ?? []).filter((sq) => sq !== selected));
     this.place('selected', selected === null ? [] : [selected]);
     this.place('target', h.targets ?? []);

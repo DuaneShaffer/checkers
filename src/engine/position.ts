@@ -66,3 +66,13 @@ export function fromFen(fen: string): Position {
 }
 
 export const INITIAL_FEN = toFen(initialPosition());
+
+export function isValidFen(s: unknown): s is string {
+  if (typeof s !== 'string') return false;
+  try {
+    fromFen(s);
+    return true;
+  } catch {
+    return false;
+  }
+}

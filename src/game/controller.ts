@@ -1,9 +1,9 @@
 import { Game } from '../engine/game.ts';
 import { moveToString } from '../engine/notation.ts';
-import { fromFen, toFen } from '../engine/position.ts';
-import type { GameStatus, Move, Position, Side, Sq } from '../engine/types.ts';
-import type { GameResult } from '../net/protocol.ts';
+import { fromFen, pieceAt, toFen } from '../engine/position.ts';
+import type { GameResult, GameStatus, Move, Position, Side, Sq } from '../engine/types.ts';
 import type { BoardView, Highlights, PieceIds } from '../scene/types.ts';
+import { SIDE_NAMES } from './announcer.ts';
 import type { DriverSnapshot, GameDriver } from './driver.ts';
 import { type Direction, startCursor, stepCursor } from './keyboard.ts';
 import { applyMoveIds, idsAfterMoves } from './pieceTracker.ts';
@@ -165,8 +165,32 @@ export class GameController {
     this.#applyHighlights();
   }
 
-  activateCursor(): void {
+  activateCursor(): Promise<void> {
     if (this.#cursor !== null) this.tap(this.#cursor);
+    return this.#input;
+  }
+
+  describeCursor(): string | null {
+    const sq = this.#cursor;
+    if (sq === null) return null;
+    const piece = pieceAt(this.#latestGame.position, sq);
+    const parts = [`Square ${sq + 1}`, piece ? `${SIDE_NAMES[piece.side].toLowerCase()} ${piece.king ? 'king' : 'man'}` : 'empty'];
+    const v = this.#selection ? selectionView(this.#selection) : null;
+    if (v) {
+      if (sq === v.current) parts.push('selected');
+      else if (v.current !== null && (v.targets.includes(sq) || v.captureTargets.includes(sq))) parts.push(`landing for ${v.current + 1}`);
+      else if (v.movable.includes(sq)) parts.push('movable');
+    }
+    return parts.join(', ');
+  }
+
+  describeSelection(): string | null {
+    const v = this.#selection ? selectionView(this.#selection) : null;
+    if (!v || v.selected === null || v.current === null) return null;
+    const next = [...v.targets, ...v.captureTargets].map((sq) => String(sq + 1));
+    const list = next.length > 1 ? `${next.slice(0, -1).join(', ')} or ${next[next.length - 1]}` : next.join('');
+    const verb = v.captureRequired ? 'jump' : 'move';
+    return v.current === v.selected ? `Selected ${v.selected + 1}; can ${verb} to ${list}` : `Jumped to ${v.current + 1}; continue to ${list}`;
   }
 
   get cursor(): Sq | null {

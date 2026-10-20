@@ -16,7 +16,7 @@ export function createToaster(region: HTMLElement): Toaster {
       const now = Date.now();
       if ((recent.get(key) ?? 0) > now - 1500) return;
       recent.set(key, now);
-      const el = h('div', { class: `toast toast-${kind}`, role: kind === 'error' ? 'alert' : 'status' }, message);
+      const el = h('div', { class: `toast toast-${kind}`, role: kind === 'error' ? 'alert' : null }, message);
       region.append(el);
       while (region.children.length > MAX_VISIBLE) region.firstElementChild?.remove();
       const ttl = kind === 'error' ? 5200 : 3200;

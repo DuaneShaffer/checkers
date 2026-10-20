@@ -1,5 +1,6 @@
 import '../styles/lab.css';
 import type { AppContext, RouteParams, Screen, ScreenFactory } from '../app/contracts.ts';
+import { aiHash } from '../app/router.ts';
 import { fromFen, INITIAL_FEN } from '../engine/position.ts';
 import { Game } from '../engine/game.ts';
 import type { GameRecord, GenerationSummary, TrainingManifest } from '../shared/formats.ts';
@@ -13,11 +14,12 @@ import {
   previousGeneration,
   type LabData,
 } from './data.ts';
-import { button, compactNumber, formatHours, h, icon, signed } from './dom.ts';
+import { h, icon } from '../ui/dom.ts';
+import { miniBoard } from '../ui/miniBoard.ts';
+import { button, compactNumber, formatHours, signed } from './dom.ts';
 import { createEloChart, type EloChart } from './eloChart.ts';
 import { DEFAULT_THINK_MS, THINK_PRESETS, liveRoute, matchupPicker } from './livePicker.ts';
-import { miniBoard } from './miniBoard.ts';
-import { kindText, mountReplay, reasonText, replayRoute, resultText } from './replayView.ts';
+import { kindText, mountReplay, replayRoute, resultText, shortReasonText } from './replayView.ts';
 import { wdlBars } from './wdlBars.ts';
 
 export type LabRoute =
@@ -68,6 +70,7 @@ export function createLabScreen(ctx: AppContext, params: RouteParams, data: LabD
 
   async function load(refresh = false): Promise<void> {
     root.replaceChildren(loadingView());
+    if (route.kind === 'replay' || (route.kind === 'live' && route.a !== null && route.b !== null)) warmBoardModule();
     let manifest: TrainingManifest;
     try {
       manifest = await data.manifest({ refresh });
@@ -162,9 +165,13 @@ export function createLabScreen(ctx: AppContext, params: RouteParams, data: LabD
   };
 }
 
+function warmBoardModule(): void {
+  import('../scene/boardView.ts').catch(() => {});
+}
+
 function header(title: string, opts: { back?: { label: string; hash: string; ctx: AppContext }; sub?: Node | string; extra?: Node | null } = {}): HTMLElement {
   return h('header', { class: 'lab-header' },
-    opts.back ? button([icon('back'), h('span', {}, opts.back.label)], () => opts.back!.ctx.navigate(opts.back!.hash), { class: 'lab-back' }) : null,
+    opts.back ? button([icon('prev'), h('span', {}, opts.back.label)], () => opts.back!.ctx.navigate(opts.back!.hash), { class: 'btn lab-back' }) : null,
     h('div', { class: 'lab-header-text' },
       h('h1', { class: 'lab-title', tabindex: -1 }, title),
       opts.sub ? h('p', { class: 'lab-sub' }, opts.sub) : null),
@@ -176,7 +183,7 @@ function page(...children: (Node | null)[]): HTMLElement {
 }
 
 function loadingView(): HTMLElement {
-  return page(h('div', { class: 'lab-loading', role: 'status' }, h('span', { class: 'lab-spinner', 'aria-hidden': 'true' }), 'Loading training data…'));
+  return page(h('div', { class: 'lab-loading', role: 'status' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), 'Loading training data…'));
 }
 
 function emptyView(ctx: AppContext): HTMLElement {
@@ -187,12 +194,14 @@ function emptyView(ctx: AppContext): HTMLElement {
       h('h2', { class: 'lab-empty-title' }, "Training hasn't run yet"),
       h('p', {}, 'When the self-play trainer publishes its first generation, this is where you will watch the engine teach itself: its rating climbing generation by generation, and replays of the games it learned from.'),
       h('p', { class: 'lab-muted' }, 'Until then, the AI plays with a hand-written heuristic.'),
-      button('Back to the table', () => ctx.navigate('#/'), { class: 'lab-btn lab-btn-primary' })));
+      button('Back to the table', () => ctx.navigate('#/'), { class: 'btn btn-primary' })));
 }
 
 function emptyIllustration(): SVGSVGElement {
-  const svg = miniBoard(fromFen(INITIAL_FEN), { orientation: 0 });
-  svg.classList.add('lab-empty-board');
+  const svg = miniBoard(fromFen(INITIAL_FEN), { className: 'lab-empty-board' });
+  svg.removeAttribute('role');
+  svg.removeAttribute('aria-label');
+  svg.setAttribute('aria-hidden', 'true');
   return svg;
 }
 
@@ -207,8 +216,8 @@ function errorView(ctx: AppContext, e: unknown, retry: () => void): HTMLElement 
       h('h2', { class: 'lab-card-title' }, missing ? 'Not found' : "Couldn't load the Lab"),
       h('p', {}, message),
       h('div', { class: 'lab-actions' },
-        missing ? button('Open the Lab overview', () => ctx.navigate('#/lab'), { class: 'lab-btn lab-btn-primary' })
-          : button('Try again', retry, { class: 'lab-btn lab-btn-primary' }))));
+        missing ? button('Open the Lab overview', () => ctx.navigate('#/lab'), { class: 'btn btn-primary' })
+          : button('Try again', retry, { class: 'btn btn-primary' }))));
 }
 
 function statTile(label: string, value: string, note?: string): HTMLElement {
@@ -241,8 +250,8 @@ function overviewView(ctx: AppContext, m: TrainingManifest, initialGen: number |
   let chart: EloChart | null = null;
   const pickerLabel = h('output', { class: 'picker-value lab-num', for: 'gen-range' });
   const range = h('input', { id: 'gen-range', type: 'range', min: 0, max: gens.length - 1, step: 1, class: 'gen-range', 'aria-label': 'Generation', 'data-testid': 'gen-range' });
-  const prevBtn = button(icon('chevronLeft'), () => selectIndex(indexOf(selected) - 1), { class: 'lab-icon-btn', 'aria-label': 'Previous generation' });
-  const nextBtn = button(icon('chevronRight'), () => selectIndex(indexOf(selected) + 1), { class: 'lab-icon-btn', 'aria-label': 'Next generation' });
+  const prevBtn = button(icon('prev'), () => selectIndex(indexOf(selected) - 1), { class: 'icon-btn', 'aria-label': 'Previous generation' });
+  const nextBtn = button(icon('next'), () => selectIndex(indexOf(selected) + 1), { class: 'icon-btn', 'aria-label': 'Next generation' });
   range.addEventListener('input', () => selectIndex(Number(range.value)));
   const picker = h('div', { class: 'gen-picker', role: 'group', 'aria-label': 'Choose a generation' }, prevBtn, range, nextBtn, pickerLabel);
 
@@ -276,7 +285,7 @@ function overviewView(ctx: AppContext, m: TrainingManifest, initialGen: number |
       genSummary(m, g),
       wdlBars(m, g),
       h('div', { class: 'lab-actions' },
-        button([h('span', {}, `Open generation ${g.gen}`), icon('chevronRight')], () => ctx.navigate(`#/lab/${g.gen}`), { class: 'lab-btn lab-btn-primary', 'data-testid': 'open-gen' })));
+        button([h('span', {}, `Open generation ${g.gen}`), icon('next')], () => ctx.navigate(`#/lab/${g.gen}`), { class: 'btn btn-primary', 'data-testid': 'open-gen' })));
   }
 
   chart = createEloChart({ manifest: m, selected, onSelect: (gen) => select(gen), onOpen: (gen) => ctx.navigate(`#/lab/${gen}`) });
@@ -345,15 +354,15 @@ function generationView(ctx: AppContext, data: LabData, m: TrainingManifest, g: 
   const prev = previousGeneration(m, g.gen);
   const next = nextGeneration(m, g.gen);
   const nav = h('div', { class: 'gen-nav' },
-    button(icon('chevronLeft'), () => prev && ctx.navigate(`#/lab/${prev.gen}`), { class: 'lab-icon-btn', 'aria-label': prev ? `Generation ${prev.gen}` : 'No earlier generation', disabled: !prev }),
-    button(icon('chevronRight'), () => next && ctx.navigate(`#/lab/${next.gen}`), { class: 'lab-icon-btn', 'aria-label': next ? `Generation ${next.gen}` : 'No later generation', disabled: !next }));
+    button(icon('prev'), () => prev && ctx.navigate(`#/lab/${prev.gen}`), { class: 'icon-btn', 'aria-label': prev ? `Generation ${prev.gen}` : 'No earlier generation', disabled: !prev }),
+    button(icon('next'), () => next && ctx.navigate(`#/lab/${next.gen}`), { class: 'icon-btn', 'aria-label': next ? `Generation ${next.gen}` : 'No later generation', disabled: !next }));
 
   const gamesCard = h('section', { class: 'lab-card games-card', 'aria-labelledby': 'games-title' });
   const list = h('ul', { class: 'game-list', 'data-testid': 'game-list' });
   const status = h('p', { class: 'lab-muted', role: 'status' }, 'Loading games…');
   let filter: GameFilter = 'all';
   let games: GameRecord[] = [];
-  const chips = FILTERS.map((f) => button(f.label, () => { filter = f.id; renderList(); }, { class: 'lab-chip', 'aria-pressed': f.id === filter ? 'true' : 'false', 'data-filter': f.id }));
+  const chips = FILTERS.map((f) => button(f.label, () => { filter = f.id; renderList(); }, { class: 'chip', 'aria-pressed': f.id === filter ? 'true' : 'false', 'data-filter': f.id }));
   gamesCard.append(
     h('div', { class: 'lab-card-head' },
       h('h2', { id: 'games-title', class: 'lab-card-title' }, 'Sampled games'),
@@ -385,8 +394,11 @@ function generationView(ctx: AppContext, data: LabData, m: TrainingManifest, g: 
 
   const liveOpponent = g.net ? [...m.generations].reverse().find((x) => x.net && x.gen < g.gen) ?? m.generations.find((x) => x.net && x.gen > g.gen) : undefined;
   const actions = h('div', { class: 'lab-actions' });
+  if (g.net) {
+    actions.append(button([icon('play'), h('span', {}, 'Play this generation')], () => ctx.navigate(aiHash({ level: 4, side: 0, gen: g.gen })), { class: 'btn btn-primary', 'data-testid': 'play-gen' }));
+  }
   if (g.net && liveOpponent) {
-    actions.append(button(`Watch live vs gen ${liveOpponent.gen}`, () => ctx.navigate(liveRoute(g.gen, liveOpponent.gen)), { class: 'lab-btn' }));
+    actions.append(button(`Watch live vs gen ${liveOpponent.gen}`, () => ctx.navigate(liveRoute(g.gen, liveOpponent.gen)), { class: 'btn' }));
   }
 
   return page(
@@ -399,9 +411,9 @@ function generationView(ctx: AppContext, data: LabData, m: TrainingManifest, g: 
 function gameCard(m: TrainingManifest, gen: number, r: GameRecord): HTMLElement {
   let finalBoard: SVGSVGElement;
   try {
-    finalBoard = miniBoard(Game.fromMoves(r.moves, { startFen: r.startFen }).position, { label: 'Final position' });
+    finalBoard = miniBoard(Game.fromMoves(r.moves, { startFen: r.startFen }).position, { label: 'Final position', className: 'lab-mini' });
   } catch {
-    finalBoard = miniBoard(fromFen(r.startFen ?? INITIAL_FEN));
+    finalBoard = miniBoard(fromFen(r.startFen ?? INITIAL_FEN), { className: 'lab-mini' });
   }
   const resultCls = r.result === '1-0' ? 'res-crimson' : r.result === '0-1' ? 'res-ivory' : 'res-draw';
   const opening = r.moves.slice(0, 3).join(' ');
@@ -413,10 +425,10 @@ function gameCard(m: TrainingManifest, gen: number, r: GameRecord): HTMLElement 
           h('span', { class: 'lab-tag' }, kindText(r)),
           h('span', { class: `lab-result ${resultCls}` }, resultText(r))),
         h('div', { class: 'game-players' },
-          h('span', { class: 'lab-swatch lab-swatch-crimson', 'aria-hidden': 'true' }), playerName(m, r.black),
-          h('span', { class: 'lab-vs' }, 'vs'),
-          h('span', { class: 'lab-swatch lab-swatch-ivory', 'aria-hidden': 'true' }), playerName(m, r.white)),
-        h('div', { class: 'game-meta lab-num' }, `${r.moves.length} plies · ${reasonText(r)}`),
+          h('span', { class: 'game-player' }, h('span', { class: 'swatch swatch-crimson', 'aria-hidden': 'true' }), h('span', { class: 'game-player-name' }, playerName(m, r.black))),
+          h('span', { class: 'sr-only' }, ' vs '),
+          h('span', { class: 'game-player' }, h('span', { class: 'swatch swatch-ivory', 'aria-hidden': 'true' }), h('span', { class: 'game-player-name' }, playerName(m, r.white)))),
+        h('div', { class: 'game-meta lab-num' }, `${r.moves.length}\u00a0plies · ${shortReasonText(r)}`),
         opening ? h('div', { class: 'game-opening lab-num' }, opening) : null),
       h('span', { class: 'game-watch', 'aria-hidden': 'true' }, icon('play'))));
 }

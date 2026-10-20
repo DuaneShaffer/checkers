@@ -14,7 +14,6 @@ import {
   type Material,
   type Texture,
 } from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   FIELD_HALF,
   FRAME_BOTTOM,
@@ -32,7 +31,7 @@ import { RAIL_TEX_ACROSS, RAIL_TEX_LENGTH, makeFieldTextures, makeRailTextures }
 const BEVEL = 0.035;
 const SEAM_OVERLAP = 0.01;
 
-type UvMapper = (p: Vector3, n: Vector3) => [number, number];
+type UvMapper = (p: Vector3, n: Vector3, centroid: Vector3) => [number, number];
 
 /** Rewrites UVs per triangle (non-indexed geometry) so grain follows the part, not the extrusion. */
 function remapUvs(geo: BufferGeometry, mapper: UvMapper): void {
@@ -43,14 +42,16 @@ function remapUvs(geo: BufferGeometry, mapper: UvMapper): void {
   const c = new Vector3();
   const n = new Vector3();
   const p = new Vector3();
+  const centroid = new Vector3();
   for (let i = 0; i < pos.count; i += 3) {
     a.fromBufferAttribute(pos, i);
     b.fromBufferAttribute(pos, i + 1);
     c.fromBufferAttribute(pos, i + 2);
+    centroid.copy(a).add(b).add(c).divideScalar(3);
     n.subVectors(c, b).cross(p.subVectors(a, b)).normalize();
     for (let k = 0; k < 3; k++) {
       p.fromBufferAttribute(pos, i + k);
-      const [u, v] = mapper(p, n);
+      const [u, v] = mapper(p, n, centroid);
       uv[(i + k) * 2] = u;
       uv[(i + k) * 2 + 1] = v;
     }
@@ -62,52 +63,55 @@ function sideV(y: number): number {
   return 0.52 + ((y - FRAME_BOTTOM) / (FRAME_TOP - FRAME_BOTTOM)) * 0.44;
 }
 
-/** Near rail (world z < 0), extruded upward, with the inner wall flush to the field edge. */
-function railGeometry(): BufferGeometry {
+const FRAME_CORNER_RADIUS = 0.18;
+const Y_AXIS = new Vector3(0, 1, 0);
+
+/** Quarter turns about +y that bring the rail containing `c` onto the near (z < 0) rail. */
+function railQuarterTurns(c: Vector3): number {
+  if (Math.abs(c.z) >= Math.abs(c.x)) return c.z < 0 ? 0 : 2;
+  return c.x < 0 ? 1 : 3;
+}
+
+/**
+ * One extrusion (outer outline with the field as a hole) bevelled once, so the mitred corners have
+ * no per-rail bevel grooves. Each quadrant gets its own rail's grain direction.
+ */
+function frameGeometry(): BufferGeometry {
   const hi = FIELD_HALF + BEVEL - SEAM_OVERLAP;
   const ho = FRAME_HALF - BEVEL;
   const shape = new Shape();
-  shape.moveTo(-hi, hi);
-  shape.lineTo(hi, hi);
-  shape.lineTo(ho, ho);
-  shape.lineTo(-ho, ho);
-  shape.closePath();
-  const depth = FRAME_TOP - FRAME_BOTTOM - 2 * BEVEL;
+  roundedRect(shape, ho, ho, FRAME_CORNER_RADIUS - BEVEL);
+  const hole = new Path();
+  hole.moveTo(-hi, -hi);
+  hole.lineTo(hi, -hi);
+  hole.lineTo(hi, hi);
+  hole.lineTo(-hi, hi);
+  hole.closePath();
+  shape.holes.push(hole);
   const geo = new ExtrudeGeometry(shape, {
-    depth,
+    depth: FRAME_TOP - FRAME_BOTTOM - 2 * BEVEL,
     bevelEnabled: true,
     bevelThickness: BEVEL,
     bevelSize: BEVEL,
     bevelSegments: 3,
-    curveSegments: 1,
+    curveSegments: 5,
   });
   geo.rotateX(-Math.PI / 2);
   geo.translate(0, FRAME_BOTTOM + BEVEL, 0);
   geo.clearGroups();
+  const local = new Vector3();
+  remapUvs(geo, (p, n, centroid) => {
+    const turns = railQuarterTurns(centroid);
+    local.copy(p).applyAxisAngle(Y_AXIS, (-turns * Math.PI) / 2);
+    const along = (local.x + RAIL_TEX_LENGTH / 2) / RAIL_TEX_LENGTH;
+    const u = turns % 2 === 1 ? 1 - along : along;
+    if (n.y > 0.3) {
+      const across = Math.max(0, -local.z - FIELD_HALF);
+      return [u, Math.min(0.5, (across / RAIL_TEX_ACROSS) * 0.5)];
+    }
+    return [u, sideV(local.y)];
+  });
   return geo;
-}
-
-function frameGeometry(): BufferGeometry {
-  const parts: BufferGeometry[] = [];
-  for (let k = 0; k < 4; k++) {
-    const g = railGeometry();
-    const flip = k % 2 === 1;
-    remapUvs(g, (p, n) => {
-      const along = (p.x + RAIL_TEX_LENGTH / 2) / RAIL_TEX_LENGTH;
-      const u = flip ? 1 - along : along;
-      if (n.y > 0.3) {
-        const across = Math.max(0, -p.z - FIELD_HALF);
-        return [u, Math.min(0.5, (across / RAIL_TEX_ACROSS) * 0.5)];
-      }
-      return [u, sideV(p.y)];
-    });
-    g.rotateY((k * Math.PI) / 2);
-    parts.push(g);
-  }
-  const merged = mergeGeometries(parts, false);
-  for (const g of parts) g.dispose();
-  if (!merged) throw new Error('frame merge failed');
-  return merged;
 }
 
 function roundedRect(path: Path | Shape, hw: number, hd: number, r: number): void {
@@ -167,7 +171,6 @@ interface WoodMaps {
   orm: Texture;
 }
 
-/** Meshes sharing one lacquered-wood material, rebuilt together when the quality tier changes. */
 interface WoodPart {
   meshes: Mesh[];
   maps: WoodMaps;

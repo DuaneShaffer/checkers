@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Side } from '../../src/engine/types.ts';
 import {
   FIT_PADDING,
+  MIN_POLAR,
   applySlotProjection,
   fitToSlot,
   homeFraming,
@@ -81,9 +82,41 @@ describe('camera fit to the board slot', () => {
     for (const [w, h] of [[400, 700], [800, 800], [1065, 900], [900, 520]]) {
       const chosen = homeFraming(w, h, 0);
       const aspect = w / h;
-      const other = fitToSlot(aspect, polarForAspect(aspect), Math.PI, framingPoints(chosen.layout === 'ends' ? 'sides' : 'ends'));
+      const other = fitToSlot(aspect, chosen.pose.polar, Math.PI, framingPoints(chosen.layout === 'ends' ? 'sides' : 'ends'));
       expect(chosen.pose.distance).toBeLessThanOrEqual(other.pose.distance);
     }
+  });
+
+  it('tilts toward top-down in a slot taller than the board, until the height is used', () => {
+    const tall = homeFraming(390, 634, 0);
+    expect(tall.pose.polar).toBeCloseTo(MIN_POLAR, 6);
+    const tablet = homeFraming(700, 768, 0);
+    expect(tablet.pose.polar).toBeLessThan(polarForAspect(700 / 768));
+    expect(tablet.pose.polar).toBeGreaterThan(MIN_POLAR);
+    const slot = { left: 0, top: 0, width: 700, height: 768 };
+    const camera = newCamera();
+    placeCamera(camera, tablet.pose);
+    applySlotProjection(camera, 700, 768, slot, tablet.center);
+    const ys = framingPoints(tablet.layout).map((p) => projectToCanvas(camera, p, 700, 768).y);
+    expect((Math.max(...ys) - Math.min(...ys)) / 768).toBeCloseTo(1 - FIT_PADDING, 2);
+  });
+
+  it('keeps the landscape tilt when height is the limit', () => {
+    expect(homeFraming(1020, 852, 0).pose.polar).toBeCloseTo(polarForAspect(1020 / 852), 6);
+  });
+
+  it('keeps phone-portrait squares close to square', () => {
+    const w = 390;
+    const h = 634;
+    const f = homeFraming(w, h, 0);
+    const camera = newCamera();
+    placeCamera(camera, f.pose);
+    applySlotProjection(camera, w, h, { left: 0, top: 0, width: w, height: h }, f.center);
+    const at = (row: number, col: number) => projectToCanvas(camera, { x: col - 3.5, y: 0, z: row - 3.5 }, w, h);
+    const rowH = Math.abs(at(7, 0).y - at(0, 0).y) / 7;
+    const colW = Math.abs(at(7, 7).x - at(7, 0).x) / 7;
+    expect(rowH / colW).toBeGreaterThan(0.95);
+    expect(colW).toBeGreaterThan(38);
   });
 
   it('gives the board a usable size on a small phone', () => {

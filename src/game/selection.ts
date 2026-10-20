@@ -1,4 +1,4 @@
-import { rowColToSq, sqToRowCol } from '../engine/bitboard.ts';
+import { jumpedSquareOrNull } from '../engine/movegen.ts';
 import { movesWithPrefix } from '../engine/notation.ts';
 import { pieceAt } from '../engine/position.ts';
 import type { Move, Position, Sq } from '../engine/types.ts';
@@ -44,12 +44,6 @@ export function createSelection(position: Position, moves: readonly Move[]): Sel
   return { position, moves, prefix: [] };
 }
 
-export function jumpedBetween(a: Sq, b: Sq): Sq | null {
-  const ra = sqToRowCol(a), rb = sqToRowCol(b);
-  if (Math.abs(ra.row - rb.row) !== 2) return null;
-  return rowColToSq((ra.row + rb.row) / 2, (ra.col + rb.col) / 2);
-}
-
 export function isCaptureState(s: SelectionState): boolean {
   return s.moves.length > 0 && s.moves[0].captured !== 0;
 }
@@ -71,7 +65,7 @@ function distinct(xs: readonly Sq[]): Sq[] {
 }
 
 function hop(from: Sq, to: Sq): Hop {
-  return { from, to, captured: jumpedBetween(from, to) };
+  return { from, to, captured: jumpedSquareOrNull(from, to) };
 }
 
 export function selectionView(s: SelectionState): SelectionView {
@@ -83,7 +77,7 @@ export function selectionView(s: SelectionState): SelectionView {
   const next = nextLandings(candidates(s), s.prefix.length);
   const pending: Sq[] = [];
   for (let i = 1; i < s.prefix.length; i++) {
-    const j = jumpedBetween(s.prefix[i - 1], s.prefix[i]);
+    const j = jumpedSquareOrNull(s.prefix[i - 1], s.prefix[i]);
     if (j !== null) pending.push(j);
   }
   return {
@@ -116,7 +110,7 @@ function tapIdle(s: SelectionState, sq: Sq | null): TapResult {
 }
 
 function tapSelected(s: SelectionState, sq: Sq | null): TapResult {
-  if (sq === null) return cancelSelection(s);
+  if (sq === null) return { state: s, effect: { kind: 'none' } };
   const current = s.prefix[s.prefix.length - 1];
   if (nextLandings(candidates(s), s.prefix.length).includes(sq)) return extend(s, sq);
   if (sq === current) return cancelSelection(s);

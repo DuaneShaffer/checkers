@@ -1,7 +1,8 @@
 import { applyMove, parseMove } from '../engine/index.ts';
-import { has, popcount, squares } from '../engine/bitboard.ts';
+import { has, popcount } from '../engine/bitboard.ts';
 import { INITIAL_FEN, fromFen } from '../engine/position.ts';
 import type { Move, Position, ResultStr, Side } from '../engine/types.ts';
+import { applyMoveIds, initialIds } from '../game/pieceTracker.ts';
 import type { PieceIds } from '../scene/types.ts';
 
 export const EVAL_LIMIT = 100;
@@ -39,22 +40,6 @@ export class ReplayError extends Error {
   }
 }
 
-export function initialIds(pos: Position): PieceIds {
-  const ids = new Int16Array(32).fill(-1);
-  let next = 0;
-  for (const sq of squares((pos.black | pos.white) >>> 0)) ids[sq] = next++;
-  return ids;
-}
-
-export function advanceIds(ids: PieceIds, move: Move): PieceIds {
-  const out = ids.slice();
-  const moving = out[move.from];
-  for (const sq of squares(move.captured)) out[sq] = -1;
-  out[move.from] = -1;
-  out[move.to] = moving;
-  return out;
-}
-
 export function buildTimeline(src: TimelineSource): ReplayTimeline {
   const startFen = src.startFen ?? INITIAL_FEN;
   let pos: Position;
@@ -74,7 +59,7 @@ export function buildTimeline(src: TimelineSource): ReplayTimeline {
     const crowned = !has(pos.kings, move.from) && has(next.kings, move.to);
     plies.push({ move, notation, side: pos.turn, captures: popcount(move.captured), crowned });
     pos = next;
-    ids = advanceIds(ids, move);
+    ids = applyMoveIds(ids, move);
     positions.push(pos);
     idList.push(ids);
   });
@@ -116,12 +101,6 @@ function normalizeEvals(evals: readonly number[] | undefined, length: number, re
     out.push(last);
   }
   return out;
-}
-
-export function fullMoveLabel(startTurn: Side, ply: number): { number: number; side: Side } {
-  const offset = startTurn === 1 ? 1 : 0;
-  const index = ply + offset;
-  return { number: Math.floor(index / 2) + 1, side: (index % 2) as Side };
 }
 
 export function clampPly(t: ReplayTimeline, ply: number): number {

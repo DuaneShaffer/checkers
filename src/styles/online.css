@@ -229,16 +229,6 @@
   color: var(--text-2);
 }
 
-.ol-spinner {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid color-mix(in srgb, var(--brass-hi) 25%, transparent);
-  border-top-color: var(--brass-hi);
-  border-radius: 50%;
-  animation: ol-spin 0.9s linear infinite;
-}
-
 .ol-about {
   border-top: 1px solid var(--line);
   padding-top: 12px;
@@ -309,6 +299,27 @@
   padding: 12px 14px;
 }
 
+.hud-a > .ol-banner {
+  flex: none;
+  box-shadow: none;
+}
+
+.hud-a > .ol-banner:not(:has(.btn)) {
+  padding: 8px 12px;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .hud-a > .ol-banner {
+    flex-wrap: wrap;
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .hud-a > .ol-banner .ol-banner-text {
+    flex-basis: 100%;
+  }
+}
+
 .ol-banner[hidden] {
   display: none;
 }
@@ -352,12 +363,6 @@ dialog.ol-resume-dialog {
   width: min(520px, calc(100vw - 24px));
 }
 
-@keyframes ol-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes ol-pulse {
   50% {
     opacity: 0.35;
@@ -378,14 +383,12 @@ dialog.ol-resume-dialog {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ol-spinner,
   .ol-dot,
   .ol-banner {
     animation: none;
   }
 }
 
-.test-mode .ol-spinner,
 .test-mode .ol-dot,
 .test-mode .ol-banner {
   animation: none;

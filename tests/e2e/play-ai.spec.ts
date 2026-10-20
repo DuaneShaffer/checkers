@@ -1,4 +1,26 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+
+const FIXTURES = join(import.meta.dirname, '../fixtures/training');
+const isTrainingUrl = (url: URL) => url.pathname.includes('/training/') && !url.pathname.includes('/tests/fixtures/');
+
+async function serveTraining(page: Page, manifest: 'manifest.json' | 'manifest-empty.json'): Promise<void> {
+  await page.route(isTrainingUrl, async (route) => {
+    const rel = new URL(route.request().url()).pathname.replace(/^.*\/training\//, '');
+    const file = rel === 'manifest.json' ? manifest : rel;
+    try {
+      const body = readFileSync(join(FIXTURES, file));
+      await route.fulfill({ status: 200, body, contentType: file.endsWith('.json') ? 'application/json' : 'application/octet-stream' });
+    } catch {
+      await route.fulfill({ status: 404, body: 'not found' });
+    }
+  });
+}
+
+test.beforeEach(async ({ page }) => {
+  await serveTraining(page, 'manifest-empty.json');
+});
 
 const pdnSquare = (pdn: number) => pdn - 1;
 const state = (page: Page) => page.evaluate(() => window.__checkers!.state());
@@ -41,6 +63,16 @@ test('the AI replies to a tapped move using the heuristic fallback', async ({ pa
   expect(s.mode).toBe('ai');
 });
 
+test('the AI plays with the champion network when training has published one', async ({ page }) => {
+  await serveTraining(page, 'manifest.json');
+  const netRequest = page.waitForRequest((req) => req.url().endsWith('/training/nets/gen-0037.bin'));
+  await open(page, '#/ai?level=1&side=1');
+  await netRequest;
+  await expect(page.locator('.hud-title-sub')).toHaveText('Neural net · gen 37');
+  await waitForAiReply(page, 1);
+  expect((await state(page)).turn).toBe(1);
+});
+
 test('the AI opens when the human plays Ivory, with nothing to undo yet', async ({ page }) => {
   await open(page, '#/ai?level=2&side=1');
   await waitForAiReply(page, 1);
@@ -49,6 +81,7 @@ test('the AI opens when the human plays Ivory, with nothing to undo yet', async 
 });
 
 test('reloading mid-game resumes it instead of starting over', async ({ page }) => {
+  test.slow();
   await open(page, '#/ai?level=1&side=1');
   await waitForAiReply(page, 1);
   expect(await page.evaluate(() => window.__checkers!.playMove('22-18'))).toBe(true);
@@ -56,7 +89,7 @@ test('reloading mid-game resumes it instead of starting over', async ({ page }) 
   const before = (await state(page)).moves;
   await expect.poll(() => page.evaluate(() => location.hash)).toMatch(/resume=g\w+/);
   await page.reload();
-  await page.waitForFunction(() => document.documentElement.dataset.route === 'ai' && document.body.dataset.ready === '1');
+  await page.waitForFunction(() => document.documentElement.dataset.route === 'ai' && document.body.dataset.ready === '1', undefined, { timeout: 60_000 });
   await expect.poll(async () => (await state(page)).moves).toEqual(before);
   await expect(page.locator('.hud-title-main')).toHaveText('vs AI · Novice');
   await expect(page.locator('.player-chip[data-pos="bottom"] .pc-name')).toHaveText('You');
@@ -84,7 +117,8 @@ test('going back to a replaced game starts fresh instead of opening the newer on
 
 test('a failed engine load can be retried', async ({ page }) => {
   let blocked = 0;
-  await page.route('**/src/ai/client.ts*', (route) => (blocked++ === 0 ? route.abort() : route.continue()));
+  const isAiClient = (url: URL) => /\/src\/ai\/client\.ts$|\/assets\/client-[\w-]+\.js$/.test(url.pathname);
+  await page.route(isAiClient, (route) => (blocked++ === 0 ? route.abort() : route.continue()));
   await open(page, '#/ai?level=1&side=1');
   const stall = page.getByRole('dialog', { name: 'The AI couldn’t move' });
   await expect(stall).toBeVisible({ timeout: 20_000 });

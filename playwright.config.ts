@@ -11,11 +11,13 @@ function isUbuntu2004(): boolean {
 if (isUbuntu2004()) process.env.PLAYWRIGHT_HOST_PLATFORM_OVERRIDE ??= 'ubuntu22.04-x64';
 
 const PORT = Number(process.env.E2E_PORT ?? 4173);
+const PREVIEW = !!process.env.E2E_PREVIEW;
 const chromiumArgs = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-features=WebRtcHideLocalIpsWithMdns'];
 
 export default defineConfig({
   testDir: 'tests/e2e',
-  timeout: 60_000,
+  timeout: Number(process.env.E2E_TIMEOUT ?? 60_000),
+  workers: process.env.CI ? 2 : 3,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
@@ -28,7 +30,7 @@ export default defineConfig({
     { name: 'phone', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: `npx vite --port ${PORT} --strictPort --host 127.0.0.1`,
+    command: `npx vite${PREVIEW ? ' preview' : ''} --port ${PORT} --strictPort --host 127.0.0.1`,
     url: `http://127.0.0.1:${PORT}/checkers/`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

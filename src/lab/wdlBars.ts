@@ -1,6 +1,6 @@
 import type { GenerationSummary, TrainingManifest, WDL } from '../shared/formats.ts';
 import { opponentLabel, orderedOpponents } from './data.ts';
-import { h } from './dom.ts';
+import { h } from '../ui/dom.ts';
 
 export function wdlScore(r: WDL): number {
   const n = r.w + r.d + r.l;
@@ -11,12 +11,11 @@ function pct(n: number, total: number): string {
   return `${Math.round((n / total) * 100)}%`;
 }
 
-function segment(kind: 'w' | 'd' | 'l', n: number, total: number): HTMLElement | null {
+function segment(kind: 'w' | 'd' | 'l', n: number): HTMLElement | null {
   if (!n) return null;
-  const share = n / total;
-  const seg = h('span', { class: `wdl-seg wdl-${kind}`, style: `flex-grow:${n}` });
-  if (share >= 0.14) seg.append(h('span', { class: 'wdl-seg-label' }, String(n)));
-  return seg;
+  const label = String(n);
+  return h('span', { class: `wdl-seg wdl-${kind}`, style: `flex-grow:${n}` },
+    h('span', { class: 'wdl-seg-label', 'data-len': Math.min(label.length, 3) }, label));
 }
 
 export function wdlBars(m: TrainingManifest, g: GenerationSummary): HTMLElement {
@@ -39,7 +38,7 @@ export function wdlBars(m: TrainingManifest, g: GenerationSummary): HTMLElement 
     list.append(h('li', { class: 'wdl-row', title: summary },
       h('span', { class: 'wdl-name' }, name),
       h('span', { class: 'wdl-bar', role: 'img', 'aria-label': summary },
-        segment('w', r.w, total), segment('d', r.d, total), segment('l', r.l, total)),
+        segment('w', r.w), segment('d', r.d), segment('l', r.l)),
       h('span', { class: 'wdl-score lab-num', 'aria-hidden': 'true' }, pct(r.w + r.d / 2, total))));
   }
   wrap.append(list);

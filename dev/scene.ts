@@ -1,4 +1,5 @@
 import { applyMove, fromFen, initialPosition, legalMoves, moveToString, type Move, type Position, type Side, type Sq } from '../src/engine/index.ts';
+import { applyMoveIds, initialIds } from '../src/game/pieceTracker.ts';
 import { createBoardViewExt } from '../src/scene/boardView.ts';
 import type { Highlights, PieceIds } from '../src/scene/types.ts';
 import type { QualityPref } from '../src/scene/quality.ts';
@@ -10,21 +11,6 @@ const view = await createBoardViewExt($('stage'), { testMode: params.has('test')
 view.setBoardSlot($('slot'));
 (window as unknown as { __view: typeof view }).__view = view;
 
-function idsFor(pos: Position): PieceIds {
-  const ids = new Int16Array(32).fill(-1);
-  let next = 0;
-  for (let sq = 0; sq < 32; sq++) if ((((pos.black | pos.white) >>> sq) & 1) === 1) ids[sq] = next++;
-  return ids;
-}
-
-function idsAfter(ids: PieceIds, m: Move): PieceIds {
-  const out = ids.slice();
-  const id = out[m.from];
-  out[m.from] = -1;
-  for (let sq = 0; sq < 32; sq++) if (((m.captured >>> sq) & 1) === 1) out[sq] = -1;
-  out[m.to] = id;
-  return out;
-}
 
 interface Ply {
   pos: Position;
@@ -47,7 +33,7 @@ function rand(): number {
 const current = () => history[history.length - 1];
 
 function reset(pos = initialPosition()): void {
-  history = [{ pos, ids: idsFor(pos), move: null }];
+  history = [{ pos, ids: initialIds(pos), move: null }];
   selected = null;
   prefix = [];
   view.setPosition(pos, current().ids);
@@ -82,7 +68,7 @@ async function commit(m: Move, fromHop = 0): Promise<void> {
   selected = null;
   prefix = [];
   const prev = current();
-  history.push({ pos: applyMove(prev.pos, m), ids: idsAfter(prev.ids, m), move: m });
+  history.push({ pos: applyMove(prev.pos, m), ids: applyMoveIds(prev.ids, m), move: m });
   view.setHighlights({ lastMove: [m.from, m.to] });
   await view.playMove(m, { fromHop });
   busy = false;
