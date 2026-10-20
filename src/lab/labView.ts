@@ -332,7 +332,7 @@ function genSummary(m: TrainingManifest, g: GenerationSummary, opts: { showName?
         delta !== null ? h('span', { class: `gen-delta ${delta > 0 ? 'is-up' : delta < 0 ? 'is-down' : ''}` }, `${signed(delta)} vs gen ${prev!.gen}`) : null)),
     h('dl', { class: 'gen-facts' },
       fact('Games trained', compactNumber(g.games)),
-      fact('Hours', formatHours(g.hours)),
+      fact('Training time', formatHours(g.hours)),
       fact('Search depth', g.depth ? String(g.depth) : '–'),
       fact('Avg length', g.avgPlies ? `${Math.round(g.avgPlies)} plies` : '–'),
       fact('Decisive', `${Math.round(g.decisive * 100)}%`)));
