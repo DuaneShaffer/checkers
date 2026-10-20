@@ -1,0 +1,1500 @@
+{
+ "format": 1,
+ "rules": "english-draughts",
+ "run": "fixture-run",
+ "updated": "2026-10-19T08:30:00Z",
+ "net": {
+  "layers": [
+   132,
+   64,
+   32,
+   1
+  ]
+ },
+ "totalGames": 80000,
+ "hours": 8.4,
+ "champion": 37,
+ "anchor": {
+  "id": "heur4",
+  "elo": 1000
+ },
+ "baselines": [
+  {
+   "id": "random",
+   "name": "Random mover",
+   "elo": 412
+  },
+  {
+   "id": "heur2",
+   "name": "Heuristic d2",
+   "elo": 768
+  },
+  {
+   "id": "heur4",
+   "name": "Heuristic d4",
+   "elo": 1000
+  },
+  {
+   "id": "heur6",
+   "name": "Heuristic d6",
+   "elo": 1163
+  }
+ ],
+ "generations": [
+  {
+   "gen": 0,
+   "games": 2000,
+   "hours": 0.21,
+   "depth": 4,
+   "elo": 409,
+   "eloErr": 76,
+   "vs": {
+    "random": {
+     "w": 9,
+     "d": 2,
+     "l": 9
+    },
+    "heur2": {
+     "w": 0,
+     "d": 9,
+     "l": 31
+    },
+    "heur4": {
+     "w": 0,
+     "d": 27,
+     "l": 73
+    }
+   },
+   "avgPlies": 75.3,
+   "decisive": 0.92,
+   "loss": 1.08,
+   "replay": "gens/gen-0000.json",
+   "net": "nets/gen-0000.bin"
+  },
+  {
+   "gen": 1,
+   "games": 4000,
+   "hours": 0.42,
+   "depth": 4,
+   "elo": 420,
+   "eloErr": 71,
+   "vs": {
+    "random": {
+     "w": 9,
+     "d": 2,
+     "l": 9
+    },
+    "heur2": {
+     "w": 0,
+     "d": 9,
+     "l": 31
+    },
+    "heur4": {
+     "w": 0,
+     "d": 27,
+     "l": 73
+    },
+    "prev": {
+     "w": 13,
+     "d": 35,
+     "l": 12
+    }
+   },
+   "avgPlies": 65.8,
+   "decisive": 0.906,
+   "loss": 1.008,
+   "replay": "gens/gen-0001.json",
+   "net": null
+  },
+  {
+   "gen": 2,
+   "games": 6000,
+   "hours": 0.63,
+   "depth": 4,
+   "elo": 423,
+   "eloErr": 72,
+   "vs": {
+    "random": {
+     "w": 9,
+     "d": 2,
+     "l": 9
+    },
+    "heur2": {
+     "w": 0,
+     "d": 9,
+     "l": 31
+    },
+    "heur4": {
+     "w": 0,
+     "d": 27,
+     "l": 73
+    },
+    "prev": {
+     "w": 12,
+     "d": 36,
+     "l": 12
+    }
+   },
+   "avgPlies": 89.3,
+   "decisive": 0.893,
+   "loss": 0.942,
+   "replay": "gens/gen-0002.json",
+   "net": null
+  },
+  {
+   "gen": 3,
+   "games": 8000,
+   "hours": 0.84,
+   "depth": 4,
+   "elo": 453,
+   "eloErr": 70,
+   "vs": {
+    "random": {
+     "w": 10,
+     "d": 2,
+     "l": 8
+    },
+    "heur2": {
+     "w": 1,
+     "d": 9,
+     "l": 30
+    },
+    "heur4": {
+     "w": 0,
+     "d": 27,
+     "l": 73
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 84.7,
+   "decisive": 0.879,
+   "loss": 0.881,
+   "replay": "gens/gen-0003.json",
+   "net": null
+  },
+  {
+   "gen": 4,
+   "games": 10000,
+   "hours": 1.05,
+   "depth": 4,
+   "elo": 446,
+   "eloErr": 72,
+   "vs": {
+    "random": {
+     "w": 10,
+     "d": 2,
+     "l": 8
+    },
+    "heur2": {
+     "w": 1,
+     "d": 9,
+     "l": 30
+    },
+    "heur4": {
+     "w": 0,
+     "d": 27,
+     "l": 73
+    },
+    "prev": {
+     "w": 11,
+     "d": 36,
+     "l": 13
+    }
+   },
+   "avgPlies": 57.2,
+   "decisive": 0.865,
+   "loss": 0.825,
+   "replay": "gens/gen-0004.json",
+   "net": null
+  },
+  {
+   "gen": 5,
+   "games": 12000,
+   "hours": 1.26,
+   "depth": 4,
+   "elo": 483,
+   "eloErr": 69,
+   "vs": {
+    "random": {
+     "w": 11,
+     "d": 2,
+     "l": 7
+    },
+    "heur2": {
+     "w": 2,
+     "d": 9,
+     "l": 29
+    },
+    "heur4": {
+     "w": 0,
+     "d": 27,
+     "l": 73
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 106.8,
+   "decisive": 0.851,
+   "loss": 0.773,
+   "replay": "gens/gen-0005.json",
+   "net": null
+  },
+  {
+   "gen": 6,
+   "games": 14000,
+   "hours": 1.47,
+   "depth": 4,
+   "elo": 507,
+   "eloErr": 68,
+   "vs": {
+    "random": {
+     "w": 12,
+     "d": 2,
+     "l": 6
+    },
+    "heur2": {
+     "w": 2,
+     "d": 10,
+     "l": 28
+    },
+    "heur4": {
+     "w": 0,
+     "d": 28,
+     "l": 72
+    },
+    "prev": {
+     "w": 15,
+     "d": 35,
+     "l": 10
+    }
+   },
+   "avgPlies": 74.7,
+   "decisive": 0.838,
+   "loss": 0.726,
+   "replay": "gens/gen-0006.json",
+   "net": null
+  },
+  {
+   "gen": 7,
+   "games": 16000,
+   "hours": 1.68,
+   "depth": 4,
+   "elo": 538,
+   "eloErr": 69,
+   "vs": {
+    "random": {
+     "w": 12,
+     "d": 2,
+     "l": 6
+    },
+    "heur2": {
+     "w": 3,
+     "d": 10,
+     "l": 27
+    },
+    "heur4": {
+     "w": 0,
+     "d": 28,
+     "l": 72
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 102.7,
+   "decisive": 0.824,
+   "loss": 0.682,
+   "replay": "gens/gen-0007.json",
+   "net": null
+  },
+  {
+   "gen": 8,
+   "games": 18000,
+   "hours": 1.89,
+   "depth": 4,
+   "elo": 574,
+   "eloErr": 63,
+   "vs": {
+    "random": {
+     "w": 13,
+     "d": 2,
+     "l": 5
+    },
+    "heur2": {
+     "w": 5,
+     "d": 10,
+     "l": 25
+    },
+    "heur4": {
+     "w": 0,
+     "d": 29,
+     "l": 71
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 83.3,
+   "decisive": 0.81,
+   "loss": 0.642,
+   "replay": "gens/gen-0008.json",
+   "net": null
+  },
+  {
+   "gen": 9,
+   "games": 20000,
+   "hours": 2.1,
+   "depth": 4,
+   "elo": 596,
+   "eloErr": 63,
+   "vs": {
+    "random": {
+     "w": 14,
+     "d": 2,
+     "l": 4
+    },
+    "heur2": {
+     "w": 5,
+     "d": 11,
+     "l": 24
+    },
+    "heur4": {
+     "w": 0,
+     "d": 29,
+     "l": 71
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 80,
+   "decisive": 0.796,
+   "loss": 0.605,
+   "replay": "gens/gen-0009.json",
+   "net": null
+  },
+  {
+   "gen": 10,
+   "games": 22000,
+   "hours": 2.31,
+   "depth": 4,
+   "elo": 658,
+   "eloErr": 61,
+   "vs": {
+    "random": {
+     "w": 16,
+     "d": 1,
+     "l": 3
+    },
+    "heur2": {
+     "w": 8,
+     "d": 12,
+     "l": 20
+    },
+    "heur4": {
+     "w": 0,
+     "d": 31,
+     "l": 69
+    },
+    "prev": {
+     "w": 19,
+     "d": 33,
+     "l": 8
+    },
+    "prev10": {
+     "w": 25,
+     "d": 14,
+     "l": 1
+    },
+    "heur6": {
+     "w": 0,
+     "d": 12,
+     "l": 28
+    }
+   },
+   "avgPlies": 104,
+   "decisive": 0.783,
+   "loss": 0.571,
+   "replay": "gens/gen-0010.json",
+   "net": "nets/gen-0010.bin"
+  },
+  {
+   "gen": 11,
+   "games": 24000,
+   "hours": 2.52,
+   "depth": 4,
+   "elo": 681,
+   "eloErr": 63,
+   "vs": {
+    "random": {
+     "w": 16,
+     "d": 1,
+     "l": 3
+    },
+    "heur2": {
+     "w": 9,
+     "d": 12,
+     "l": 19
+    },
+    "heur4": {
+     "w": 0,
+     "d": 32,
+     "l": 68
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 114.3,
+   "decisive": 0.769,
+   "loss": 0.54,
+   "replay": "gens/gen-0011.json",
+   "net": null
+  },
+  {
+   "gen": 12,
+   "games": 26000,
+   "hours": 2.73,
+   "depth": 4,
+   "elo": 740,
+   "eloErr": 60,
+   "vs": {
+    "random": {
+     "w": 17,
+     "d": 1,
+     "l": 2
+    },
+    "heur2": {
+     "w": 12,
+     "d": 13,
+     "l": 15
+    },
+    "heur4": {
+     "w": 1,
+     "d": 34,
+     "l": 65
+    },
+    "prev": {
+     "w": 19,
+     "d": 33,
+     "l": 8
+    }
+   },
+   "avgPlies": 90.5,
+   "decisive": 0.755,
+   "loss": 0.511,
+   "replay": "gens/gen-0012.json",
+   "net": null
+  },
+  {
+   "gen": 13,
+   "games": 28000,
+   "hours": 2.94,
+   "depth": 4,
+   "elo": 781,
+   "eloErr": 58,
+   "vs": {
+    "random": {
+     "w": 17,
+     "d": 1,
+     "l": 2
+    },
+    "heur2": {
+     "w": 14,
+     "d": 14,
+     "l": 12
+    },
+    "heur4": {
+     "w": 4,
+     "d": 36,
+     "l": 60
+    },
+    "prev": {
+     "w": 17,
+     "d": 34,
+     "l": 9
+    }
+   },
+   "avgPlies": 79.5,
+   "decisive": 0.741,
+   "loss": 0.485,
+   "replay": "gens/gen-0013.json",
+   "net": null
+  },
+  {
+   "gen": 14,
+   "games": 30000,
+   "hours": 3.15,
+   "depth": 4,
+   "elo": 827,
+   "eloErr": 58,
+   "vs": {
+    "random": {
+     "w": 18,
+     "d": 1,
+     "l": 1
+    },
+    "heur2": {
+     "w": 17,
+     "d": 13,
+     "l": 10
+    },
+    "heur4": {
+     "w": 8,
+     "d": 38,
+     "l": 54
+    },
+    "prev": {
+     "w": 17,
+     "d": 34,
+     "l": 9
+    }
+   },
+   "avgPlies": 75.3,
+   "decisive": 0.728,
+   "loss": 0.46,
+   "replay": "gens/gen-0014.json",
+   "net": null
+  },
+  {
+   "gen": 15,
+   "games": 32000,
+   "hours": 3.36,
+   "depth": 4,
+   "elo": 872,
+   "eloErr": 55,
+   "vs": {
+    "random": {
+     "w": 18,
+     "d": 1,
+     "l": 1
+    },
+    "heur2": {
+     "w": 20,
+     "d": 12,
+     "l": 8
+    },
+    "heur4": {
+     "w": 12,
+     "d": 41,
+     "l": 47
+    },
+    "prev": {
+     "w": 17,
+     "d": 34,
+     "l": 9
+    },
+    "prev10": {
+     "w": 28,
+     "d": 12,
+     "l": 0
+    },
+    "heur6": {
+     "w": 0,
+     "d": 14,
+     "l": 26
+    }
+   },
+   "avgPlies": 102.5,
+   "decisive": 0.714,
+   "loss": 0.438,
+   "replay": "gens/gen-0015.json",
+   "net": null
+  },
+  {
+   "gen": 16,
+   "games": 34000,
+   "hours": 3.57,
+   "depth": 4,
+   "elo": 911,
+   "eloErr": 54,
+   "vs": {
+    "random": {
+     "w": 18,
+     "d": 1,
+     "l": 1
+    },
+    "heur2": {
+     "w": 22,
+     "d": 11,
+     "l": 7
+    },
+    "heur4": {
+     "w": 15,
+     "d": 44,
+     "l": 41
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 128.5,
+   "decisive": 0.7,
+   "loss": 0.417,
+   "replay": "gens/gen-0016.json",
+   "net": null
+  },
+  {
+   "gen": 17,
+   "games": 36000,
+   "hours": 3.78,
+   "depth": 4,
+   "elo": 970,
+   "eloErr": 56,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 25,
+     "d": 10,
+     "l": 5
+    },
+    "heur4": {
+     "w": 22,
+     "d": 48,
+     "l": 30
+    },
+    "prev": {
+     "w": 19,
+     "d": 33,
+     "l": 8
+    }
+   },
+   "avgPlies": 80,
+   "decisive": 0.686,
+   "loss": 0.398,
+   "replay": "gens/gen-0017.json",
+   "net": null
+  },
+  {
+   "gen": 18,
+   "games": 38000,
+   "hours": 3.99,
+   "depth": 4,
+   "elo": 1016,
+   "eloErr": 55,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 27,
+     "d": 10,
+     "l": 3
+    },
+    "heur4": {
+     "w": 28,
+     "d": 49,
+     "l": 23
+    },
+    "prev": {
+     "w": 17,
+     "d": 34,
+     "l": 9
+    }
+   },
+   "avgPlies": 112.7,
+   "decisive": 0.673,
+   "loss": 0.381,
+   "replay": "gens/gen-0018.json",
+   "net": null
+  },
+  {
+   "gen": 19,
+   "games": 40000,
+   "hours": 4.2,
+   "depth": 4,
+   "elo": 1031,
+   "eloErr": 51,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 28,
+     "d": 10,
+     "l": 2
+    },
+    "heur4": {
+     "w": 30,
+     "d": 48,
+     "l": 22
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 114,
+   "decisive": 0.659,
+   "loss": 0.365,
+   "replay": "gens/gen-0019.json",
+   "net": null
+  },
+  {
+   "gen": 20,
+   "games": 42000,
+   "hours": 4.41,
+   "depth": 4,
+   "elo": 1095,
+   "eloErr": 54,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 30,
+     "d": 9,
+     "l": 1
+    },
+    "heur4": {
+     "w": 42,
+     "d": 43,
+     "l": 15
+    },
+    "prev": {
+     "w": 19,
+     "d": 33,
+     "l": 8
+    },
+    "prev10": {
+     "w": 29,
+     "d": 11,
+     "l": 0
+    },
+    "heur6": {
+     "w": 6,
+     "d": 20,
+     "l": 14
+    }
+   },
+   "avgPlies": 70.2,
+   "decisive": 0.645,
+   "loss": 0.35,
+   "replay": "gens/gen-0020.json",
+   "net": null
+  },
+  {
+   "gen": 21,
+   "games": 44000,
+   "hours": 4.62,
+   "depth": 4,
+   "elo": 1132,
+   "eloErr": 52,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 31,
+     "d": 9,
+     "l": 0
+    },
+    "heur4": {
+     "w": 48,
+     "d": 41,
+     "l": 11
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 84.7,
+   "decisive": 0.631,
+   "loss": 0.336,
+   "replay": "gens/gen-0021.json",
+   "net": null
+  },
+  {
+   "gen": 22,
+   "games": 46000,
+   "hours": 4.83,
+   "depth": 4,
+   "elo": 1146,
+   "eloErr": 52,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 50,
+     "d": 40,
+     "l": 10
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 114.3,
+   "decisive": 0.617,
+   "loss": 0.324,
+   "replay": "gens/gen-0022.json",
+   "net": null
+  },
+  {
+   "gen": 23,
+   "games": 48000,
+   "hours": 5.04,
+   "depth": 4,
+   "elo": 1181,
+   "eloErr": 47,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 55,
+     "d": 38,
+     "l": 7
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 168.7,
+   "decisive": 0.604,
+   "loss": 0.312,
+   "replay": "gens/gen-0023.json",
+   "net": null
+  },
+  {
+   "gen": 24,
+   "games": 50000,
+   "hours": 5.25,
+   "depth": 4,
+   "elo": 1208,
+   "eloErr": 50,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 58,
+     "d": 37,
+     "l": 5
+    },
+    "prev": {
+     "w": 15,
+     "d": 35,
+     "l": 10
+    }
+   },
+   "avgPlies": 128.2,
+   "decisive": 0.59,
+   "loss": 0.302,
+   "replay": "gens/gen-0024.json",
+   "net": null
+  },
+  {
+   "gen": 25,
+   "games": 52000,
+   "hours": 5.46,
+   "depth": 4,
+   "elo": 1227,
+   "eloErr": 45,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 61,
+     "d": 36,
+     "l": 3
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    },
+    "prev10": {
+     "w": 28,
+     "d": 12,
+     "l": 0
+    },
+    "heur6": {
+     "w": 14,
+     "d": 20,
+     "l": 6
+    }
+   },
+   "avgPlies": 152.2,
+   "decisive": 0.576,
+   "loss": 0.292,
+   "replay": "gens/gen-0025.json",
+   "net": null
+  },
+  {
+   "gen": 26,
+   "games": 54000,
+   "hours": 5.67,
+   "depth": 4,
+   "elo": 1264,
+   "eloErr": 49,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 65,
+     "d": 34,
+     "l": 1
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    }
+   },
+   "avgPlies": 121.8,
+   "decisive": 0.563,
+   "loss": 0.283,
+   "replay": "gens/gen-0026.json",
+   "net": null
+  },
+  {
+   "gen": 27,
+   "games": 56000,
+   "hours": 5.88,
+   "depth": 4,
+   "elo": 1282,
+   "eloErr": 47,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 67,
+     "d": 33,
+     "l": 0
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 108,
+   "decisive": 0.549,
+   "loss": 0.275,
+   "replay": "gens/gen-0027.json",
+   "net": null
+  },
+  {
+   "gen": 28,
+   "games": 58000,
+   "hours": 6.09,
+   "depth": 4,
+   "elo": 1303,
+   "eloErr": 44,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 68,
+     "d": 32,
+     "l": 0
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 108.5,
+   "decisive": 0.535,
+   "loss": 0.267,
+   "replay": "gens/gen-0028.json",
+   "net": null
+  },
+  {
+   "gen": 29,
+   "games": 60000,
+   "hours": 6.3,
+   "depth": 4,
+   "elo": 1290,
+   "eloErr": 45,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 67,
+     "d": 33,
+     "l": 0
+    },
+    "prev": {
+     "w": 11,
+     "d": 35,
+     "l": 14
+    }
+   },
+   "avgPlies": 127.8,
+   "decisive": 0.521,
+   "loss": 0.26,
+   "replay": "gens/gen-0029.json",
+   "net": null
+  },
+  {
+   "gen": 30,
+   "games": 62000,
+   "hours": 6.51,
+   "depth": 4,
+   "elo": 1323,
+   "eloErr": 41,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 68,
+     "d": 32,
+     "l": 0
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    },
+    "prev10": {
+     "w": 25,
+     "d": 14,
+     "l": 1
+    },
+    "heur6": {
+     "w": 20,
+     "d": 17,
+     "l": 3
+    }
+   },
+   "avgPlies": 118,
+   "decisive": 0.508,
+   "loss": 0.254,
+   "replay": "gens/gen-0030.json",
+   "net": null
+  },
+  {
+   "gen": 31,
+   "games": 64000,
+   "hours": 6.72,
+   "depth": 4,
+   "elo": 1327,
+   "eloErr": 43,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 68,
+     "d": 32,
+     "l": 0
+    },
+    "prev": {
+     "w": 12,
+     "d": 36,
+     "l": 12
+    }
+   },
+   "avgPlies": 184.5,
+   "decisive": 0.494,
+   "loss": 0.248,
+   "replay": "gens/gen-0031.json",
+   "net": null
+  },
+  {
+   "gen": 32,
+   "games": 66000,
+   "hours": 6.93,
+   "depth": 4,
+   "elo": 1326,
+   "eloErr": 42,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 68,
+     "d": 32,
+     "l": 0
+    },
+    "prev": {
+     "w": 12,
+     "d": 36,
+     "l": 12
+    }
+   },
+   "avgPlies": 133.3,
+   "decisive": 0.48,
+   "loss": 0.243,
+   "replay": "gens/gen-0032.json",
+   "net": null
+  },
+  {
+   "gen": 33,
+   "games": 68000,
+   "hours": 7.14,
+   "depth": 4,
+   "elo": 1343,
+   "eloErr": 38,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 33,
+     "d": 7,
+     "l": 0
+    },
+    "heur4": {
+     "w": 69,
+     "d": 31,
+     "l": 0
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 88.8,
+   "decisive": 0.466,
+   "loss": 0.238,
+   "replay": "gens/gen-0033.json",
+   "net": null
+  },
+  {
+   "gen": 34,
+   "games": 70000,
+   "hours": 7.35,
+   "depth": 4,
+   "elo": 1336,
+   "eloErr": 37,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 32,
+     "d": 8,
+     "l": 0
+    },
+    "heur4": {
+     "w": 69,
+     "d": 31,
+     "l": 0
+    },
+    "prev": {
+     "w": 11,
+     "d": 36,
+     "l": 13
+    }
+   },
+   "avgPlies": 157.2,
+   "decisive": 0.453,
+   "loss": 0.233,
+   "replay": "gens/gen-0034.json",
+   "net": null
+  },
+  {
+   "gen": 35,
+   "games": 72000,
+   "hours": 7.56,
+   "depth": 4,
+   "elo": 1370,
+   "eloErr": 36,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 33,
+     "d": 7,
+     "l": 0
+    },
+    "heur4": {
+     "w": 70,
+     "d": 30,
+     "l": 0
+    },
+    "prev": {
+     "w": 16,
+     "d": 34,
+     "l": 10
+    },
+    "prev10": {
+     "w": 20,
+     "d": 16,
+     "l": 4
+    },
+    "heur6": {
+     "w": 23,
+     "d": 16,
+     "l": 1
+    }
+   },
+   "avgPlies": 188.2,
+   "decisive": 0.439,
+   "loss": 0.229,
+   "replay": "gens/gen-0035.json",
+   "net": null
+  },
+  {
+   "gen": 36,
+   "games": 74000,
+   "hours": 7.77,
+   "depth": 4,
+   "elo": 1355,
+   "eloErr": 34,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 33,
+     "d": 7,
+     "l": 0
+    },
+    "heur4": {
+     "w": 69,
+     "d": 31,
+     "l": 0
+    },
+    "prev": {
+     "w": 11,
+     "d": 35,
+     "l": 14
+    }
+   },
+   "avgPlies": 151.3,
+   "decisive": 0.425,
+   "loss": 0.225,
+   "replay": "gens/gen-0036.json",
+   "net": null
+  },
+  {
+   "gen": 37,
+   "games": 76000,
+   "hours": 7.98,
+   "depth": 4,
+   "elo": 1375,
+   "eloErr": 36,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 33,
+     "d": 7,
+     "l": 0
+    },
+    "heur4": {
+     "w": 70,
+     "d": 30,
+     "l": 0
+    },
+    "prev": {
+     "w": 14,
+     "d": 35,
+     "l": 11
+    }
+   },
+   "avgPlies": 185.2,
+   "decisive": 0.411,
+   "loss": 0.221,
+   "replay": "gens/gen-0037.json",
+   "net": "nets/gen-0037.bin"
+  },
+  {
+   "gen": 38,
+   "games": 78000,
+   "hours": 8.19,
+   "depth": 4,
+   "elo": 1357,
+   "eloErr": 33,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 33,
+     "d": 7,
+     "l": 0
+    },
+    "heur4": {
+     "w": 69,
+     "d": 31,
+     "l": 0
+    },
+    "prev": {
+     "w": 11,
+     "d": 35,
+     "l": 14
+    }
+   },
+   "avgPlies": 173,
+   "decisive": 0.398,
+   "loss": 0.218,
+   "replay": "gens/gen-0038.json",
+   "net": null
+  },
+  {
+   "gen": 39,
+   "games": 80000,
+   "hours": 8.4,
+   "depth": 4,
+   "elo": 1368,
+   "eloErr": 32,
+   "vs": {
+    "random": {
+     "w": 19,
+     "d": 1,
+     "l": 0
+    },
+    "heur2": {
+     "w": 33,
+     "d": 7,
+     "l": 0
+    },
+    "heur4": {
+     "w": 70,
+     "d": 30,
+     "l": 0
+    },
+    "prev": {
+     "w": 13,
+     "d": 35,
+     "l": 12
+    }
+   },
+   "avgPlies": 202.7,
+   "decisive": 0.384,
+   "loss": 0.215,
+   "replay": "gens/gen-0039.json",
+   "net": "nets/gen-0039.bin"
+  }
+ ]
+}

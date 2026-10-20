@@ -1,0 +1,159 @@
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  outline: none;
+}
+
+.ui {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding:
+    calc(var(--safe-top) + 10px)
+    calc(var(--safe-right) + 12px)
+    calc(var(--safe-bottom) + 10px)
+    calc(var(--safe-left) + 12px);
+  pointer-events: none;
+}
+
+.screen :is(button, a, input, select, textarea, label, .card, .panel, .player-chip, .move-list, dialog) {
+  pointer-events: auto;
+}
+
+.board-slot {
+  grid-area: board;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--r-lg);
+  pointer-events: none;
+}
+
+.board-slot:focus-visible {
+  outline: 2px dashed rgba(230, 199, 135, 0.5);
+  outline-offset: -6px;
+}
+
+.empty-screen {
+  place-items: center;
+}
+
+.empty-card {
+  display: grid;
+  gap: 12px;
+  width: min(420px, 100%);
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.empty-card h1 {
+  font-size: 28px;
+}
+
+.empty-card p {
+  color: var(--text-2);
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.game-screen {
+  grid-template:
+    'a' auto
+    'board' minmax(0, 1fr)
+    'b' auto
+    / minmax(0, 1fr);
+}
+
+.hud-a,
+.hud-b {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.hud-a {
+  grid-area: a;
+}
+
+.hud-b {
+  grid-area: b;
+}
+
+.moves-panel {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .game-screen {
+    --rail-min: 100px;
+    --board-h: calc(100vh - var(--safe-top) - var(--safe-bottom) - 20px);
+    grid-template:
+      'a board b' minmax(0, 1fr)
+      / minmax(var(--rail-min), 260px) min(var(--board-h), calc(100% - 2 * var(--rail-min) - 20px)) minmax(var(--rail-min), 260px);
+    justify-content: center;
+    gap: 10px;
+  }
+
+  @supports (height: 100dvh) {
+    .game-screen {
+      --board-h: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 20px);
+    }
+  }
+
+  .hud-a > *,
+  .hud-b > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .hud-b > :first-child {
+    margin-top: auto;
+  }
+}
+
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  .game-screen {
+    grid-template:
+      'board a' minmax(0, 1fr)
+      'board b' auto
+      / minmax(0, 1fr) clamp(300px, 26vw, 380px);
+    gap: 14px 28px;
+    padding:
+      calc(var(--safe-top) + 24px)
+      calc(var(--safe-right) + 28px)
+      calc(var(--safe-bottom) + 24px)
+      calc(var(--safe-left) + 28px);
+  }
+
+  .moves-panel {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+}

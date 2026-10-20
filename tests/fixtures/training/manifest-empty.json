@@ -1,0 +1,23 @@
+{
+ "format": 1,
+ "rules": "english-draughts",
+ "run": "",
+ "updated": "",
+ "net": {
+  "layers": [
+   132,
+   64,
+   32,
+   1
+  ]
+ },
+ "totalGames": 0,
+ "hours": 0,
+ "champion": null,
+ "anchor": {
+  "id": "heur4",
+  "elo": 1000
+ },
+ "baselines": [],
+ "generations": []
+}

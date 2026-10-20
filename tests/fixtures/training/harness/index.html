@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Lab harness</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0c0b0a; overscroll-behavior: none; }
+      .harness-live { position: fixed; inset: 0; z-index: 3; padding: 16px; color: #f3ede2; font: 14px system-ui; background: #141210; overflow: auto; }
+      .harness-live button { min-height: 44px; margin: 4px; }
+      .harness-toasts { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 9; display: grid; gap: 8px; pointer-events: none; }
+      .harness-toasts div { padding: 10px 14px; border-radius: 10px; background: #1b1815; color: #f3ede2; font: 14px system-ui; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./harness.ts"></script>
+  </body>
+</html>

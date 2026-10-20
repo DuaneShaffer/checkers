@@ -1,0 +1,392 @@
+.ol-screen {
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+}
+
+.ol-card {
+  display: grid;
+  gap: 18px;
+  width: min(540px, 100%);
+  min-width: 0;
+  margin: auto;
+  padding: 26px 22px 22px;
+}
+
+.ol-head {
+  display: grid;
+  gap: 8px;
+}
+
+.ol-title {
+  font-size: clamp(26px, 6.4vw, 34px);
+  overflow-wrap: anywhere;
+}
+
+.ol-lede {
+  color: var(--text-2);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.ol-code {
+  color: var(--brass-hi);
+  letter-spacing: 0.06em;
+}
+
+.ol-fine {
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.ol-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ol-field-label {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ol-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ol-chip {
+  flex: 1 1 auto;
+}
+
+.ol-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ol-actions > .btn-primary {
+  flex: 1 1 200px;
+}
+
+.ol-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text-2);
+}
+
+.ol-steps li::marker {
+  color: var(--brass);
+  font-family: var(--font-mono);
+}
+
+.ol-link {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ol-link-text {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  resize: none;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-1);
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.35;
+  word-break: break-all;
+  pointer-events: auto;
+}
+
+.ol-link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ol-link-buttons > .btn {
+  flex: 1 1 auto;
+}
+
+.ol-qr {
+  justify-self: center;
+  width: min(280px, 100%);
+  padding: 10px;
+  border-radius: var(--r-md);
+  background: #fff;
+}
+
+.ol-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ol-paste {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ol-paste-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ol-paste-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+}
+
+.ol-callout {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--line) 40%, transparent);
+  color: var(--text-2);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.ol-callout-warn {
+  border-left-color: var(--brass);
+  color: var(--text);
+}
+
+.ol-callout-error {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  border-left-color: var(--danger);
+  color: var(--text);
+}
+
+.ol-callout-ok {
+  border-left-color: var(--ok);
+}
+
+.ol-failure,
+.ol-hint {
+  display: grid;
+  gap: 12px;
+}
+
+.ol-failure:empty,
+.ol-hint:empty {
+  display: none;
+}
+
+.ol-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.ol-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brass);
+  animation: ol-pulse 1.4s ease-in-out infinite;
+}
+
+.ol-status[data-tone='ok'] .ol-dot {
+  background: var(--ok);
+  animation: none;
+}
+
+.ol-status[data-tone='error'] {
+  color: var(--text);
+}
+
+.ol-status[data-tone='error'] .ol-dot {
+  background: var(--danger);
+  animation: none;
+}
+
+.ol-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-2);
+}
+
+.ol-spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--brass-hi) 25%, transparent);
+  border-top-color: var(--brass-hi);
+  border-radius: 50%;
+  animation: ol-spin 0.9s linear infinite;
+}
+
+.ol-about {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.ol-about summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+  list-style: none;
+  pointer-events: auto;
+}
+
+.ol-about summary::-webkit-details-marker {
+  display: none;
+}
+
+.ol-about summary::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+
+.ol-about[open] summary::after {
+  content: '–';
+}
+
+.ol-about-body {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.ol-overlay {
+  position: fixed;
+  z-index: 5;
+  top: calc(var(--safe-top) + 62px);
+  left: 50%;
+  width: min(520px, calc(100vw - 24px - var(--safe-left) - var(--safe-right)));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ol-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--surface-solid) 96%, transparent);
+  box-shadow: 0 14px 34px -14px color-mix(in srgb, var(--bg-0) 85%, transparent);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.3;
+  pointer-events: auto;
+  animation: ol-drop 220ms var(--ease-out);
+}
+
+.ol-banner:not(:has(.btn)) {
+  padding: 12px 14px;
+}
+
+.ol-banner[hidden] {
+  display: none;
+}
+
+.ol-banner[data-tone='warn'] {
+  border-color: color-mix(in srgb, var(--brass) 50%, transparent);
+}
+
+.ol-banner[data-tone='error'] {
+  flex-wrap: wrap;
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.ol-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ol-banner[data-tone='error'] .ol-banner-text {
+  flex-basis: 100%;
+  padding: 6px 0 2px;
+}
+
+.ol-banner .btn {
+  flex: none;
+}
+
+.ol-resume {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ol-resume-link {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+dialog.ol-resume-dialog {
+  width: min(520px, calc(100vw - 24px));
+}
+
+@keyframes ol-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ol-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes ol-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (min-width: 720px) {
+  .ol-card {
+    padding: 34px 32px 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ol-spinner,
+  .ol-dot,
+  .ol-banner {
+    animation: none;
+  }
+}
+
+.test-mode .ol-spinner,
+.test-mode .ol-dot,
+.test-mode .ol-banner {
+  animation: none;
+}

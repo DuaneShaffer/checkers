@@ -93,5 +93,5 @@ export function isTrainingManifest(x: unknown): x is TrainingManifest {
 export function isGenFile(x: unknown): x is GenFile {
   const g = x as GenFile;
   return !!g && g.format === 1 && Number.isInteger(g.gen) && Array.isArray(g.games)
-    && g.games.every((r) => typeof r.id === 'string' && Array.isArray(r.moves));
+    && g.games.every((r) => !!r && typeof r.id === 'string' && Array.isArray(r.moves));
 }
